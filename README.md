@@ -37,6 +37,20 @@ The platform combines resume text extraction, semantic similarity, skill matchin
 - View saved jobs.
 - Remove saved jobs.
 
+## Application Screenshots
+
+### Homepage
+![TechMatch-AI Homepage](documentation/screenshots/homepage.png)
+
+### Resume Analysis
+![Resume Analysis](documentation/screenshots/resume-analysis.png)
+
+### Job Search and Filters
+![Job Search](documentation/screenshots/job-search.png)
+
+### AI Job Recommendations
+![Job Recommendations](documentation/screenshots/job-recommendations.png)
+
 ## Technology Stack
 
 | Component | Technologies |
