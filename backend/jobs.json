@@ -1,0 +1,80 @@
+
+[
+  {
+    "id": 1,
+    "title": "Machine Learning Intern",
+    "company": "TechNova",
+    "location": "Remote",
+    "job_type": "Internship",
+    "skills": ["Python", "Machine Learning", "TensorFlow", "SQL"],
+    "description": "Looking for a Machine Learning Intern with knowledge of Python, machine learning algorithms, TensorFlow, data preprocessing and SQL.",
+    "source": "Demo Dataset",
+    "apply_url": "https://example.com/jobs/ml-intern"
+  },
+  {
+    "id": 2,
+    "title": "Frontend Developer Intern",
+    "company": "WebSphere",
+    "location": "Bangalore",
+    "job_type": "Internship",
+    "skills": ["HTML", "CSS", "JavaScript", "React"],
+    "description": "Seeking a frontend developer with React, JavaScript, HTML and CSS skills to build responsive web applications.",
+    "source": "Demo Dataset",
+    "apply_url": "https://example.com/jobs/frontend"
+  },
+  {
+    "id": 3,
+    "title": "Data Scientist",
+    "company": "DataWorks",
+    "location": "Remote",
+    "job_type": "Full-time",
+    "skills": ["Python", "SQL", "Data Science", "Machine Learning", "Pandas"],
+    "description": "We need a Data Scientist experienced in Python, statistical analysis, machine learning, SQL and data visualization.",
+    "source": "Demo Dataset",
+    "apply_url": "https://example.com/jobs/data-scientist"
+  },
+  {
+    "id": 4,
+    "title": "Backend Developer",
+    "company": "CloudTech",
+    "location": "Pune",
+    "job_type": "Full-time",
+    "skills": ["Python", "FastAPI", "PostgreSQL", "Docker", "REST API"],
+    "description": "Looking for a backend engineer skilled in Python, FastAPI, PostgreSQL, REST APIs and Docker.",
+    "source": "Demo Dataset",
+    "apply_url": "https://example.com/jobs/backend"
+  },
+  {
+    "id": 5,
+    "title": "AI Research Intern",
+    "company": "FutureAI",
+    "location": "Remote",
+    "job_type": "Internship",
+    "skills": ["Python", "Deep Learning", "PyTorch", "NLP", "Transformers"],
+    "description": "AI research internship involving deep learning, natural language processing, transformer architectures and PyTorch.",
+    "source": "Demo Dataset",
+    "apply_url": "https://example.com/jobs/ai-research"
+  },
+  {
+    "id": 6,
+    "title": "Cybersecurity Analyst",
+    "company": "SecureNet",
+    "location": "Delhi",
+    "job_type": "Full-time",
+    "skills": ["Cybersecurity", "Networking", "Linux", "Python"],
+    "description": "Cybersecurity analyst required with networking, Linux, Python and security monitoring knowledge.",
+    "source": "Demo Dataset",
+    "apply_url": "https://example.com/jobs/security"
+  },
+  {
+    "id": 7,
+    "title": "Cloud and DevOps Intern",
+    "company": "InfraLabs",
+    "location": "Remote",
+    "job_type": "Internship",
+    "skills": ["AWS", "Docker", "Kubernetes", "Linux", "Git"],
+    "description": "Seeking a cloud and DevOps intern with knowledge of AWS, containerization, Docker, Kubernetes and Linux.",
+    "source": "Demo Dataset",
+    "apply_url": "https://example.com/jobs/devops"
+  }
+]
