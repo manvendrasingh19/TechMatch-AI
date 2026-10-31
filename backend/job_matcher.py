@@ -99,4 +99,3 @@ def rank_jobs(resume_text, jobs, limit=10):
 def recommend_jobs(resume_text, limit=10):
     jobs = load_jobs()
     return rank_jobs(resume_text, jobs, limit)
-

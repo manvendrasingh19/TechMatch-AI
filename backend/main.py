@@ -104,7 +104,6 @@ async def get_adzuna_jobs():
             detail=f"Adzuna fetch failed: {str(error)}"
         )
 
-    
 @app.post("/api/resume/analyze")
 async def upload_resume(file: UploadFile = File(...)):
 
@@ -797,7 +796,6 @@ def register(request: RegisterRequest):
                 detail="An account with this email already exists."
             )
         raise HTTPException(status_code=500, detail="Registration failed.")
-    
 @app.post("/api/auth/login")
 def login(request: LoginRequest):
     user = get_user_by_email(str(request.email))

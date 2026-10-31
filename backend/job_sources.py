@@ -91,4 +91,3 @@ async def fetch_remotive_jobs(keyword=None, location=None):
         results.append(normalized)
 
     return results
-
