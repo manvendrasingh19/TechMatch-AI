@@ -1,5 +1,7 @@
 # TechMatch-AI
 
+[![Backend Tests](https://github.com/manvendrasingh19/TechMatch-AI/actions/workflows/backend-tests.yml/badge.svg)](https://github.com/manvendrasingh19/TechMatch-AI/actions/workflows/backend-tests.yml)
+
 **AI-Powered Resume Analyzer and Job Recommendation Platform**
 
 TechMatch-AI is a web application designed to help technology job seekers analyze their resumes, discover relevant job opportunities, and identify skills that match their career interests.
