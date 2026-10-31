@@ -2,7 +2,7 @@
 import re
 from io import BytesIO
 
-import fitz
+import pymupdf as fitz
 from docx import Document
 
 

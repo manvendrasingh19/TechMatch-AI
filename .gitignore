@@ -43,3 +43,9 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.bak
+
+# Test coverage reports
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
