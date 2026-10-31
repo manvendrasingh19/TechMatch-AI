@@ -1,20 +1,22 @@
-name: Backend Tests
+name: TechMatch AI CI
 
 on:
   push:
     branches: [main]
     paths:
       - "backend/**"
+      - "frontend/**"
       - ".github/workflows/backend-tests.yml"
 
   pull_request:
     branches: [main]
     paths:
       - "backend/**"
+      - "frontend/**"
       - ".github/workflows/backend-tests.yml"
 
 jobs:
-  test:
+  backend-tests:
     name: Run Backend Tests
     runs-on: ubuntu-latest
 
@@ -29,13 +31,40 @@ jobs:
           cache: "pip"
           cache-dependency-path: backend/requirements.txt
 
-      - name: Install dependencies
+      - name: Install backend dependencies
         working-directory: backend
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run tests with coverage
+      - name: Run backend tests with coverage
         working-directory: backend
         run: |
           python -m pytest --cov=. --cov-report=term-missing
+
+  frontend-tests:
+    name: Run Frontend Tests and Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run frontend tests with coverage
+        working-directory: frontend
+        run: npm run test:coverage
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build

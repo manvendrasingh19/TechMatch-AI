@@ -63,3 +63,6 @@ __pycache__/
 # =========================
 .DS_Store
 Thumbs.db
+
+# Frontend test coverage reports
+coverage/

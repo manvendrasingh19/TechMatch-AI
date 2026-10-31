@@ -1068,6 +1068,11 @@ function App() {
                   </div>
 
 
+                  {matchError && (
+                    <p className="error-message" role="alert">
+                      {matchError}
+                    </p>
+                  )}
                   <button
                     className="find-jobs-button"
                     onClick={handleUnifiedSearch}
