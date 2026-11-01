@@ -13,6 +13,7 @@ import { jsPDF } from "jspdf";
 function App() {
   const fileInput = useRef(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [activeDemoMatch, setActiveDemoMatch] = useState(0);
   const [resume, setResume] = useState(null);
   const [loading, setLoading] = useState(false);
   const [analysis, setAnalysis] = useState(null);
@@ -1278,6 +1279,7 @@ function App() {
               <div className="mock-top">
                 <div>
                   <span className="muted-label">YOUR CAREER DASHBOARD</span>
+                  <span className="demo-preview-label">INTERACTIVE PREVIEW</span>
                   <h3>Recommended for you</h3>
                 </div>
                 <div className="mock-avatar">TM</div>
@@ -1297,31 +1299,69 @@ function App() {
                 <span className="match-count">Personalized</span>
               </div>
 
-              <div className="job-preview">
-                <div className="company-icon purple">AI</div>
-                <div className="job-info">
-                  <strong>Machine Learning Intern</strong>
-                  <p>Technology Company · Remote</p>
-                </div>
-                <div className="score">94%</div>
+              <div className="demo-match-list" aria-label="Example job matches">
+                <button
+                  type="button"
+                  className={`job-preview ${activeDemoMatch === 0 ? "job-preview-active" : ""}`}
+                  onClick={() => setActiveDemoMatch(0)}
+                  aria-pressed={activeDemoMatch === 0}
+                >
+                  <span className="company-icon purple">AI</span>
+                  <span className="job-info">
+                    <strong>Machine Learning Intern</strong>
+                    <span>Technology Company · Remote</span>
+                  </span>
+                  <span className="score">94%</span>
+                </button>
+
+                <button
+                  type="button"
+                  className={`job-preview ${activeDemoMatch === 1 ? "job-preview-active" : ""}`}
+                  onClick={() => setActiveDemoMatch(1)}
+                  aria-pressed={activeDemoMatch === 1}
+                >
+                  <span className="company-icon blue">DS</span>
+                  <span className="job-info">
+                    <strong>Data Science Intern</strong>
+                    <span>Analytics Company · Hybrid</span>
+                  </span>
+                  <span className="score">89%</span>
+                </button>
+
+                <button
+                  type="button"
+                  className={`job-preview ${activeDemoMatch === 2 ? "job-preview-active" : ""}`}
+                  onClick={() => setActiveDemoMatch(2)}
+                  aria-pressed={activeDemoMatch === 2}
+                >
+                  <span className="company-icon green">SE</span>
+                  <span className="job-info">
+                    <strong>Software Engineer Intern</strong>
+                    <span>Product Company · On-site</span>
+                  </span>
+                  <span className="score">85%</span>
+                </button>
               </div>
 
-              <div className="job-preview">
-                <div className="company-icon blue">DS</div>
-                <div className="job-info">
-                  <strong>Data Science Intern</strong>
-                  <p>Analytics Company · Hybrid</p>
-                </div>
-                <div className="score">89%</div>
-              </div>
-
-              <div className="job-preview">
-                <div className="company-icon green">SE</div>
-                <div className="job-info">
-                  <strong>Software Engineer Intern</strong>
-                  <p>Product Company · On-site</p>
-                </div>
-                <div className="score">85%</div>
+              <div className="demo-match-insight" aria-live="polite">
+                <span className="demo-insight-icon"><Sparkles size={14} /></span>
+                <span>
+                  <strong>
+                    {["Best alignment", "Strong potential", "Great role fit"][activeDemoMatch]}
+                  </strong>
+                  <small>
+                    {[
+                      "Illustrative match preview · 94% compatibility",
+                      "Illustrative match preview · 89% compatibility",
+                      "Illustrative match preview · 85% compatibility"
+                    ][activeDemoMatch]}
+                  </small>
+                </span>
+                <span className="demo-insight-dots" aria-hidden="true">
+                  {[0, 1, 2].map((index) => (
+                    <i key={index} className={activeDemoMatch === index ? "active" : ""} />
+                  ))}
+                </span>
               </div>
 
               <div className="mock-footer">
@@ -1330,10 +1370,11 @@ function App() {
               </div>
             </div>
 
-            <div className="floating-card">
-              <Target size={20} />
-              <div><strong>Smart Matching</strong><p>Find your best fit</p></div>
-            </div>
+            <a className="floating-card" href="#features" aria-label="Explore smart matching features">
+              <span className="floating-card-icon"><Target size={20} /></span>
+              <span><strong>Smart Matching</strong><p>Find your best fit</p></span>
+              <ArrowRight className="floating-card-arrow" size={15} />
+            </a>
           </div>
         </section>
 
@@ -1871,11 +1912,26 @@ function App() {
 
             <section className="saved-jobs-section">
               <div className="saved-jobs-heading">
-                <h2>Saved Jobs</h2>
+                <div className="saved-jobs-title">
+                  <span className="saved-jobs-icon"><BriefcaseBusiness size={19} /></span>
+                  <span>
+                    <h2>Saved Jobs</h2>
+                    <small>Your shortlist, all in one place</small>
+                  </span>
+                </div>
 
                 <button
                   className="saved-jobs-toggle"
                   onClick={() => {
+                    if (!currentUser || !authToken) {
+                      setAuthError("Please log in to view your saved jobs.");
+                      document.getElementById("auth-section")?.scrollIntoView({
+                        behavior: "smooth",
+                        block: "center"
+                      });
+                      return;
+                    }
+
                     const nextState = !showSavedJobs;
                     setShowSavedJobs(nextState);
 
@@ -1884,7 +1940,8 @@ function App() {
                     }
                   }}
                 >
-                  {showSavedJobs ? "Hide Saved Jobs" : "View Saved Jobs"}
+                  {showSavedJobs ? "Hide Saved Jobs" : currentUser ? "View Saved Jobs" : "Log in to View"}
+                  <ArrowRight size={16} />
                 </button>
               </div>
 
@@ -2195,11 +2252,46 @@ function App() {
           </div>
         </section>
 
-        <section className="stats">
-          <div><strong>1 Resume</strong><span>One-time upload</span></div>
-          <div><strong>Multiple Sources</strong><span>Unified job discovery</span></div>
-          <div><strong>AI Matching</strong><span>Personalized results</span></div>
-          <div><strong>Skill Insights</strong><span>Identify skill gaps</span></div>
+        <section className="stats" aria-label="TechMatch AI capabilities">
+          <button className="stat-card" type="button" onClick={openUpload}>
+            <span className="stat-icon"><FileText size={19} /></span>
+            <span className="stat-copy"><strong>1 Resume</strong><small>One-time upload</small></span>
+            <ArrowRight className="stat-arrow" size={16} />
+          </button>
+
+          <button
+            className="stat-card"
+            type="button"
+            onClick={() => document.querySelector(".search-dashboard")?.scrollIntoView({ behavior: "smooth", block: "center" })}
+          >
+            <span className="stat-icon stat-icon-blue"><Search size={19} /></span>
+            <span className="stat-copy"><strong>Multiple Sources</strong><small>Unified job discovery</small></span>
+            <ArrowRight className="stat-arrow" size={16} />
+          </button>
+
+          <button
+            className="stat-card"
+            type="button"
+            onClick={() => document.querySelector("#features .feature-card:nth-child(3)")?.scrollIntoView({ behavior: "smooth", block: "center" })}
+          >
+            <span className="stat-icon stat-icon-green"><Target size={19} /></span>
+            <span className="stat-copy"><strong>AI Matching</strong><small>Personalized results</small></span>
+            <ArrowRight className="stat-arrow" size={16} />
+          </button>
+
+          <button
+            className="stat-card"
+            type="button"
+            onClick={() => {
+              const skillSection = document.querySelector(".skill-gap-section");
+              const fallbackSection = document.querySelector("#features .feature-card:nth-child(4)");
+              (skillSection || fallbackSection)?.scrollIntoView({ behavior: "smooth", block: "center" });
+            }}
+          >
+            <span className="stat-icon stat-icon-amber"><TrendingUp size={19} /></span>
+            <span className="stat-copy"><strong>Skill Insights</strong><small>Identify skill gaps</small></span>
+            <ArrowRight className="stat-arrow" size={16} />
+          </button>
         </section>
 
         <section className="section" id="features">
