@@ -8176,3 +8176,526 @@ body {
     animation: none !important;
   }
 }
+
+
+/* =========================================================
+   TECHMATCH AI — SEARCH & MATCH JOBS / COMPACT DESIGN PASS
+   Additive overrides only. Existing React state and handlers
+   remain unchanged.
+========================================================= */
+
+/* A more natural page scale at the browser's normal 100% zoom. */
+:root {
+  --page-width: 1120px;
+  --page-gutter: clamp(16px, 3vw, 30px);
+}
+
+.hero {
+  min-height: 0;
+  padding: clamp(48px, 5vw, 64px) var(--page-gutter);
+  gap: clamp(26px, 4vw, 48px);
+}
+
+.hero h1 {
+  font-size: clamp(36px, 4.35vw, 53px);
+  letter-spacing: -2.35px;
+}
+
+.hero-description {
+  margin-top: 18px;
+  font-size: 14px;
+  line-height: 1.72;
+}
+
+.hero-actions {
+  margin-top: 24px;
+  gap: 18px;
+}
+
+.primary-btn {
+  padding: 13px 20px;
+  font-size: 13px;
+}
+
+.dashboard-card {
+  padding: 21px;
+  border-radius: 17px;
+}
+
+.section {
+  max-width: 1120px;
+  padding: 72px var(--page-gutter);
+}
+
+.section-heading {
+  margin-bottom: 36px;
+}
+
+.section-heading h2 {
+  font-size: clamp(26px, 3.2vw, 35px);
+}
+
+.feature-card {
+  padding: 22px 18px;
+}
+
+.categories-section {
+  padding-top: 48px;
+  padding-bottom: 72px;
+}
+
+.category-card {
+  padding: 18px;
+}
+
+.how-section {
+  padding-block: 66px;
+}
+
+.steps-grid {
+  gap: 16px;
+}
+
+.step {
+  padding: 20px;
+}
+
+.final-cta {
+  margin-block: 52px;
+  padding: 25px 28px;
+}
+
+.career-workspace {
+  padding: 27px var(--page-gutter) 42px;
+}
+
+.career-workspace-inner {
+  gap: 20px;
+}
+
+.personal-profile,
+.resume-results,
+.resume-advisor,
+.saved-jobs-section {
+  padding: clamp(19px, 2.4vw, 25px);
+  border-radius: 17px;
+}
+
+.profile-heading {
+  margin-bottom: 19px;
+}
+
+.profile-heading h2 {
+  font-size: 23px;
+}
+
+.profile-form {
+  gap: 17px;
+}
+
+.job-results {
+  gap: 18px;
+}
+
+.job-grid {
+  gap: 17px;
+}
+
+.job-card {
+  padding: 19px;
+  border-radius: 15px;
+}
+
+.job-card h3 {
+  font-size: 18px;
+}
+
+.job-description {
+  font-size: 12.5px;
+  line-height: 1.65;
+}
+
+.tailor-result {
+  padding: 19px;
+}
+
+.stats {
+  padding-block: 22px;
+}
+
+footer {
+  padding-block: 22px;
+}
+
+/* Search panel surface and header. */
+.search-dashboard {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: clamp(23px, 2.7vw, 31px);
+  border: 1px solid #e4e7f3;
+  border-radius: 20px;
+  background:
+    radial-gradient(ellipse at 8% 0%, rgba(112, 97, 255, .075), transparent 34%),
+    radial-gradient(ellipse at 96% 100%, rgba(73, 151, 255, .055), transparent 30%),
+    #fff;
+  box-shadow: 0 13px 36px rgba(35, 42, 88, .055);
+  transition: box-shadow .25s ease, border-color .25s ease;
+}
+
+.search-dashboard:hover {
+  border-color: #d9d5ff;
+  box-shadow: 0 17px 42px rgba(35, 42, 88, .075);
+}
+
+.search-heading {
+  position: relative;
+  z-index: 1;
+  margin: 0 auto 25px;
+  max-width: 700px;
+  text-align: center;
+}
+
+.search-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 11px;
+  border: 1px solid #e7e3ff;
+  border-radius: 999px;
+  background: #f5f3ff;
+  color: #6555e9;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.35px;
+}
+
+.search-heading h2 {
+  margin: 11px 0 7px;
+  color: #18223b;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: clamp(23px, 2.6vw, 29px);
+  font-weight: 800;
+  letter-spacing: -.9px;
+  line-height: 1.25;
+}
+
+.search-heading p {
+  max-width: 620px;
+  margin: 0 auto;
+  color: #78849c;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+/* Main search fields. */
+.search-form {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 17px 18px;
+}
+
+.search-field {
+  min-width: 0;
+  gap: 7px;
+}
+
+.search-field label,
+.source-selection > label,
+.filter-skills > label {
+  color: #34415d;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .05px;
+}
+
+.search-field input,
+.search-field select {
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid #dce2ef;
+  border-radius: 10px;
+  background-color: #fff;
+  color: #25314b;
+  font-family: inherit;
+  font-size: 13px;
+  box-shadow: 0 1px 2px rgba(24, 34, 59, .025);
+  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+
+.search-field input:hover,
+.search-field select:hover {
+  border-color: #c8c2ff;
+}
+
+.search-field input:focus,
+.search-field select:focus {
+  border-color: #8174f3;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(101, 85, 233, .10);
+  outline: none;
+}
+
+/* Source selection becomes two small selectable tiles. */
+.source-selection {
+  min-width: 0;
+  gap: 9px;
+}
+
+.source-options {
+  align-items: center;
+  gap: 8px;
+}
+
+.source-options label {
+  min-height: 37px;
+  padding: 0 11px;
+  gap: 8px;
+  border: 1px solid #e5e8f2;
+  border-radius: 9px;
+  background: #fbfcff;
+  color: #53617b;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .2s ease, border-color .2s ease, color .2s ease,
+              transform .2s ease, box-shadow .2s ease;
+}
+
+.source-options label:has(input:checked) {
+  border-color: #d4ceff;
+  background: #f4f2ff;
+  color: #5c4cdb;
+  box-shadow: inset 0 0 0 1px rgba(101, 85, 233, .035);
+}
+
+.source-options label:hover {
+  transform: translateY(-1px);
+  border-color: #c8c1ff;
+}
+
+.source-options input,
+.filter-skill-options input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: #6555e9;
+  cursor: pointer;
+}
+
+/* Advanced filters are grouped in a quiet inset panel. */
+.advanced-filters {
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 17px;
+  margin-top: 2px;
+  padding: 17px;
+  border: 1px solid #eceaf8;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #faf9ff 0%, #fbfcff 100%);
+}
+
+.advanced-filters h3 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 1px;
+  color: #283451;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.advanced-filters h3::before {
+  content: "";
+  width: 4px;
+  height: 17px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #8275ff, #5c4cde);
+}
+
+.filter-skills {
+  grid-column: 1 / -1;
+  padding-top: 2px;
+}
+
+.filter-skills > label {
+  margin-bottom: 10px;
+}
+
+.filter-skill-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter-skill-options label {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  border: 1px solid #e4e8f1;
+  border-radius: 999px;
+  background: #fff;
+  color: #5c6880;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform .18s ease, border-color .18s ease,
+              background .18s ease, color .18s ease, box-shadow .18s ease;
+}
+
+.filter-skill-options label:has(input:checked) {
+  border-color: #d5ceff;
+  background: #f1efff;
+  color: #5b4bd6;
+  box-shadow: 0 2px 7px rgba(101, 85, 233, .06);
+}
+
+.filter-skill-options label:hover {
+  transform: translateY(-1px);
+  border-color: #c8c1ff;
+}
+
+.filter-skill-options label:focus-within {
+  outline: 2px solid rgba(101, 85, 233, .2);
+  outline-offset: 2px;
+}
+
+/* Main action: clear, prominent, and aligned with the panel. */
+.search-submit-button,
+.search-form .find-jobs-button {
+  grid-column: 1 / -1;
+  width: min(100%, 430px);
+  min-height: 44px;
+  justify-self: start;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+  padding: 11px 19px;
+  border: 1px solid #5c4de0;
+  border-radius: 10px;
+  background: linear-gradient(110deg, #7163ff 0%, #5a49e7 100%);
+  color: #fff;
+  box-shadow: 0 7px 16px rgba(94, 77, 225, .19);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .1px;
+  cursor: pointer;
+  transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+}
+
+.search-submit-button:hover:not(:disabled),
+.search-form .find-jobs-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: saturate(1.08);
+  box-shadow: 0 11px 22px rgba(94, 77, 225, .25);
+}
+
+.search-submit-button:active:not(:disabled),
+.search-form .find-jobs-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.search-submit-button:disabled,
+.search-form .find-jobs-button:disabled {
+  opacity: .72;
+  cursor: wait;
+  box-shadow: none;
+}
+
+.search-form .error-message {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #ffd7d7;
+  border-radius: 9px;
+  background: #fff7f7;
+  color: #b83e4b;
+  font-size: 12px;
+}
+
+/* Smaller, more balanced cards and section rhythm throughout the page. */
+@media (max-width: 900px) {
+  .hero {
+    padding-block: 45px;
+  }
+
+  .section {
+    padding-block: 58px;
+  }
+
+  .career-workspace-inner {
+    gap: 18px;
+  }
+}
+
+@media (max-width: 650px) {
+  .search-dashboard {
+    padding: 19px 16px;
+    border-radius: 15px;
+  }
+
+  .search-heading {
+    margin-bottom: 20px;
+  }
+
+  .search-heading h2 {
+    font-size: 23px;
+  }
+
+  .search-form,
+  .advanced-filters {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 13px;
+  }
+
+  .advanced-filters {
+    padding: 14px;
+  }
+
+  .filter-skills {
+    grid-column: 1;
+  }
+
+  .filter-skill-options {
+    gap: 7px;
+  }
+
+  .filter-skill-options label {
+    min-height: 31px;
+    padding-inline: 9px;
+  }
+
+  .search-submit-button,
+  .search-form .find-jobs-button {
+    width: 100%;
+    max-width: none;
+  }
+
+  .section {
+    padding-block: 48px;
+  }
+
+  .final-cta {
+    margin-block: 35px;
+    padding: 21px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .search-dashboard,
+  .search-field input,
+  .search-field select,
+  .source-options label,
+  .filter-skill-options label,
+  .search-submit-button {
+    transition: none !important;
+  }
+}

@@ -1971,7 +1971,7 @@ function App() {
                     </p>
                   )}
                   <button
-                    className="find-jobs-button"
+                    className="find-jobs-button search-submit-button"
                     onClick={handleUnifiedSearch}
                     disabled={matching}
                   >
