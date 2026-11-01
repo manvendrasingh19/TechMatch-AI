@@ -1,5 +1,5 @@
-
 import json
+import re
 from pathlib import Path
 
 import numpy as np
@@ -19,25 +19,63 @@ def load_jobs():
         return json.load(file)
 
 
-def calculate_skill_match(resume_text, job_skills):
-    resume_lower = resume_text.lower()
+TECH_SKILLS = [
+    "Python", "Java", "JavaScript", "TypeScript", "C++", "C#",
+    "React", "Angular", "Vue.js", "Node.js", "Express",
+    "HTML", "CSS", "SQL", "PostgreSQL", "MySQL", "MongoDB",
+    "Machine Learning", "Deep Learning", "Artificial Intelligence",
+    "TensorFlow", "PyTorch", "Scikit-learn", "Pandas", "NumPy",
+    "Data Science", "Data Analysis", "Power BI", "Tableau",
+    "AWS", "Azure", "Google Cloud", "Docker", "Kubernetes",
+    "DevOps", "Linux", "Git", "GitHub", "CI/CD",
+    "FastAPI", "Django", "Flask", "REST API",
+    "Cybersecurity", "Penetration Testing", "Network Security",
+    "Selenium", "Pytest", "Jest",
+    "Android", "Kotlin", "Swift", "Flutter",
+    "Computer Vision", "Natural Language Processing",
+    "Generative AI", "LLM", "LangChain"
+]
 
-    matched = [
-        skill for skill in job_skills
-        if skill.lower() in resume_lower
-    ]
 
-    missing = [
-        skill for skill in job_skills
-        if skill.lower() not in resume_lower
-    ]
+def calculate_skill_match(resume_text, job_skills, job_description=""):
+    resume_lower = (resume_text or "").lower()
 
-    if not job_skills:
+    # Use explicitly provided skills when available.
+    skills_to_check = list(job_skills or [])
+
+    # If the job source has no structured skills,
+    # extract recognized skills from its description.
+    if not skills_to_check:
+        description_lower = (job_description or "").lower()
+
+        skills_to_check = [
+            skill for skill in TECH_SKILLS
+            if re.search(
+                r"(?<!\w)" + re.escape(skill.lower()) + r"(?!\w)",
+                description_lower
+            )
+        ]
+
+    matched = []
+    missing = []
+
+    for skill in skills_to_check:
+        pattern = (
+            r"(?<!\w)" + re.escape(skill.lower()) + r"(?!\w)"
+        )
+
+        if re.search(pattern, resume_lower):
+            matched.append(skill)
+        else:
+            missing.append(skill)
+
+    if not skills_to_check:
         return 0, matched, missing
 
-    score = len(matched) / len(job_skills)
+    score = len(matched) / len(skills_to_check)
 
     return score, matched, missing
+
 
 
 
@@ -70,7 +108,8 @@ def rank_jobs(resume_text, jobs, limit=10):
     for index, job in enumerate(jobs):
         skill_score, matched, missing = calculate_skill_match(
             resume_text,
-            job.get("skills", [])
+            job.get("skills", []),
+            job.get("description", "")
         )
 
         semantic_score = float(semantic_scores[index])

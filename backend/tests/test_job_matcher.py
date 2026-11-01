@@ -56,6 +56,62 @@ def test_empty_job_skills():
     assert matched == []
     assert missing == []
 
+def test_skill_extraction_fallback_from_job_description():
+    score, matched, missing = calculate_skill_match(
+        "Python React developer",
+        [],
+        "Looking for a developer with Python, React and Docker."
+    )
+
+    assert score == pytest.approx(2 / 3)
+    assert matched == ["Python", "React"]
+    assert missing == ["Docker"]
+
+
+def test_skill_extraction_fallback_respects_word_boundaries():
+    score, matched, missing = calculate_skill_match(
+        "JavaScript developer",
+        [],
+        "Experience with Java and JavaScript required."
+    )
+
+    assert score == pytest.approx(0.5)
+    assert matched == ["JavaScript"]
+    assert missing == ["Java"]
+
+
+def test_skill_extraction_fallback_with_no_recognized_skills():
+    score, matched, missing = calculate_skill_match(
+        "Software developer",
+        [],
+        "Looking for an enthusiastic software developer."
+    )
+
+    assert score == 0
+    assert matched == []
+    assert missing == []
+
+
+def test_skill_extraction_handles_none_job_description():
+    score, matched, missing = calculate_skill_match(
+        "Python developer",
+        [],
+        None
+    )
+
+    assert score == 0
+    assert matched == []
+    assert missing == []
+def test_skill_matching_handles_none_resume_text():
+    score, matched, missing = calculate_skill_match(
+        None,
+        ["Python"],
+        "Python developer required."
+    )
+
+    assert score == 0
+    assert matched == []
+    assert missing == ["Python"]
 
 def test_skill_matching_is_case_insensitive():
     score, matched, missing = calculate_skill_match(

@@ -74,6 +74,7 @@ afterEach(() => {
 describe('TechMatch AI App', () => {
   it('renders the homepage', () => {
     render(<App />)
+
     expect(
       screen.getByRole('heading', { name: /Find the right tech job/i })
     ).toBeInTheDocument()
@@ -81,6 +82,7 @@ describe('TechMatch AI App', () => {
 
   it('displays the login form by default', () => {
     render(<App />)
+
 
     expect(
       screen.getByRole('heading', { name: 'Welcome to TechMatch AI' })
@@ -128,8 +130,10 @@ describe('TechMatch AI App', () => {
       screen.queryByPlaceholderText('Full Name')
     ).not.toBeInTheDocument()
   })
-    it('rejects unsupported resume file formats', () => {
+    it('rejects unsupported resume file formats', async () => {
+      mockAuthenticatedUser()
     const { container } = render(<App />)
+    await screen.findByText('Test User')
 
     const fileInput = container.querySelector('input[type="file"]')
 
@@ -148,8 +152,10 @@ describe('TechMatch AI App', () => {
     ).toBeInTheDocument()
   })
 
-  it('rejects resume files larger than 5 MB', () => {
+  it('rejects resume files larger than 5 MB', async () => {
+    mockAuthenticatedUser()
     const { container } = render(<App />)
+    await screen.findByText('Test User')
 
 
     const fileInput = container.querySelector('input[type="file"]')
@@ -169,18 +175,23 @@ describe('TechMatch AI App', () => {
     ).toBeInTheDocument()
   })
     it('uploads a valid PDF resume successfully', async () => {
-    const mockResponse = {
-      ok: true,
-      json: async () => ({
-        data: { skills: ['Python', 'React'] },
-      }),
-    }
-
-    const fetchMock = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(mockResponse)
+      mockAuthenticatedUser()
 
     const { container } = render(<App />)
+    await screen.findByText('Test User')
+      const mockResponse = {
+        ok: true,
+        json: async () => ({
+          data: {
+            extracted_text: 'Python developer with React experience.',
+            skills: ['Python', 'React'],
+            filename: 'resume.pdf',
+          },
+        }),
+      }
+      const fetchMock = vi
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValue(mockResponse)
 
     const fileInput = container.querySelector('input[type="file"]')
 
@@ -195,8 +206,15 @@ describe('TechMatch AI App', () => {
             target: { files: [pdfFile] },
         })
     })
+    await screen.findByRole('heading', {
+      name: 'Find Your Perfect Tech Job',
+    })
 
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const resumeUploadCalls = fetchMock.mock.calls.filter(
+      ([url]) => url.includes('/api/resume/analyze')
+    )
+
+    expect(resumeUploadCalls).toHaveLength(1)
     expect(fetchMock).toHaveBeenCalledWith(
       'http://127.0.0.1:8000/api/resume/analyze',
       expect.objectContaining({
@@ -207,16 +225,22 @@ describe('TechMatch AI App', () => {
   })
 
   it('uploads a valid DOCX resume successfully', async () => {
-    const fetchMock = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          data: { skills: ['Java', 'SQL'] },
-        }),
-      })
+    mockAuthenticatedUser()
 
     const { container } = render(<App />)
+    await screen.findByText('Test User')
+      const fetchMock = vi
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValue({
+          ok: true,
+          json: async () => ({
+            data: {
+              extracted_text: 'Java developer with SQL experience.',
+              skills: ['Java', 'SQL'],
+              filename: 'resume.docx',
+            },
+          }),
+      })
 
     const fileInput = container.querySelector('input[type="file"]')
 
@@ -234,18 +258,33 @@ describe('TechMatch AI App', () => {
         })
     })
 
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const resumeUploadCalls = fetchMock.mock.calls.filter(
+      ([url]) => url.includes('/api/resume/analyze')
+    )
+
+    expect(resumeUploadCalls).toHaveLength(1)
   })
 
   it('displays an error when the backend rejects resume analysis', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-      ok: false,
-      json: async () => ({
-        detail: 'Resume analysis failed.',
-      }),
-    })
+    mockAuthenticatedUser()
 
     const { container } = render(<App />)
+    await screen.findByText('Test User')
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+        if (url.includes('/api/resume/analyze')) {
+          return {
+            ok: false,
+            json: async () => ({
+              detail: 'Resume analysis failed.',
+            }),
+          }
+        }
+
+        return {
+          ok: true,
+          json: async () => ({}),
+        }
+      })
 
     const fileInput = container.querySelector('input[type="file"]')
 
@@ -267,6 +306,7 @@ describe('TechMatch AI App', () => {
     mockAuthenticatedUser()
 
     render(<App />)
+    await screen.findByText('Test User')
 
     expect(
       await screen.findByRole('heading', {
@@ -285,6 +325,8 @@ describe('TechMatch AI App', () => {
     const user = userEvent.setup()
 
     render(<App />)
+    await screen.findByText('Test User')
+
 
     const category = await screen.findByLabelText(
       'Software Development'
@@ -301,7 +343,7 @@ describe('TechMatch AI App', () => {
     const user = userEvent.setup()
 
     render(<App />)
-
+    await screen.findByText('Test User')
     const category = await screen.findByLabelText(
       'Software Development'
     )
@@ -366,7 +408,7 @@ describe('TechMatch AI App', () => {
     const user = userEvent.setup()
 
     render(<App />)
-
+    await screen.findByText('Test User')
 
     const locationInput = await screen.findByPlaceholderText(
       'India, Jabalpur, Remote...'
@@ -488,7 +530,7 @@ describe('TechMatch AI App', () => {
 
   const fetchMock = globalThis.fetch
 
-  fetchMock.mockImplementation(async (url, options = {}) => {
+  fetchMock.mockImplementation(async (url) => {
     if (url.includes('/api/auth/me')) {
       return {
         ok: true,
@@ -536,9 +578,10 @@ describe('TechMatch AI App', () => {
       ok: true,
       json: async () => ({}),
     }
-  })
+  });
 
   const { container } = render(<App />)
+  await screen.findByText('Test User')
 
   const fileInput = container.querySelector('input[type="file"]')
 
@@ -552,6 +595,9 @@ describe('TechMatch AI App', () => {
     fireEvent.change(fileInput, {
       target: { files: [pdfFile] },
     })
+  })
+  await screen.findByRole('heading', {
+    name: 'Find Your Perfect Tech Job',
   })
 
   expect(
@@ -626,6 +672,7 @@ it('prevents job search when no job source is selected', async () => {
   })
 
   render(<App />)
+  await screen.findByText('Test User')
 
   const fileInput = document.querySelector('input[type="file"]')
 
@@ -639,6 +686,10 @@ it('prevents job search when no job source is selected', async () => {
         ],
       },
     })
+  })
+
+  await screen.findByRole('heading', {
+    name: 'Find Your Perfect Tech Job',
   })
 
   const remotiveCheckbox = screen.getByRole('checkbox', {
@@ -674,7 +725,7 @@ it('sends the correct filters and authorization token when searching for jobs', 
   const mockRecommendations = []
 
   const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(
-    async (url, options = {}) => {
+    async (url, _options = {}) => {
       if (url.includes('/api/auth/me')) {
         return {
           ok: true,
@@ -738,6 +789,7 @@ it('sends the correct filters and authorization token when searching for jobs', 
   )
 
   render(<App />)
+  await screen.findByText('Test User')
 
   // Upload a resume
   const fileInput = document.querySelector('input[type="file"]')
@@ -752,6 +804,10 @@ it('sends the correct filters and authorization token when searching for jobs', 
         ],
       },
     })
+  })
+
+  await screen.findByRole('heading', {
+    name: 'Find Your Perfect Tech Job',
   })
 
   // Change job keyword and location
@@ -942,6 +998,7 @@ it('displays job recommendation cards with correct details', async () => {
   )
 
   render(<App />)
+  await screen.findByText('Test User')
 
   // Upload resume
   const fileInput = document.querySelector('input[type="file"]')
@@ -956,6 +1013,10 @@ it('displays job recommendation cards with correct details', async () => {
         ],
       },
     })
+  })
+
+  await screen.findByRole('heading', {
+    name: 'Find Your Perfect Tech Job',
   })
 
   // Search for jobs
@@ -1117,6 +1178,7 @@ it('saves a job successfully with the correct API request', async () => {
   )
 
   render(<App />)
+  await screen.findByText('Test User')
 
   // Upload resume
   const fileInput = document.querySelector('input[type="file"]')
@@ -1131,6 +1193,10 @@ it('saves a job successfully with the correct API request', async () => {
         ],
       },
     })
+  })
+
+  await screen.findByRole('heading', {
+    name: 'Find Your Perfect Tech Job',
   })
 
   // Search for jobs
@@ -1273,6 +1339,7 @@ it('displays an error when saving a job fails', async () => {
   )
 
   render(<App />)
+  await screen.findByText('Test User')
 
   const fileInput = document.querySelector('input[type="file"]')
 
@@ -1286,6 +1353,10 @@ it('displays an error when saving a job fails', async () => {
         ],
       },
     })
+  })
+
+  await screen.findByRole('heading', {
+    name: 'Find Your Perfect Tech Job',
   })
 
   await user.click(
@@ -1381,7 +1452,9 @@ it('removes a saved job successfully', async () => {
     }
   )
 
+
   render(<App />)
+  await screen.findByText('Test User')
 
   const fileInput = document.querySelector('input[type="file"]')
 
@@ -1420,7 +1493,7 @@ it('removes a saved job successfully', async () => {
 
   // Verify DELETE API request
   const deleteCall = fetchMock.mock.calls.find(
-    ([url, options]) => options?.method === 'DELETE'
+    ([, options]) => options?.method === 'DELETE'
   )
 
   expect(deleteCall).toBeDefined()
@@ -1512,6 +1585,7 @@ it('displays an error when removing a saved job fails', async () => {
   )
 
   render(<App />)
+  await screen.findByText('Test User')
     const fileInput = document.querySelector('input[type="file"]')
 
     await act(async () => {
@@ -1553,7 +1627,7 @@ it('displays an error when removing a saved job fails', async () => {
 
   // Verify DELETE request
   const deleteCall = fetchMock.mock.calls.find(
-    ([url, options]) => options?.method === 'DELETE'
+    ([, options]) => options?.method === 'DELETE'
   )
 
   expect(deleteCall).toBeDefined()
@@ -1571,7 +1645,7 @@ it('registers a new user successfully', async () => {
   const user = userEvent.setup()
 
   const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(
-    async (url, options = {}) => {
+    async (url, _options = {}) => {
       if (url.includes('/api/auth/register')) {
         return {
           ok: true,
