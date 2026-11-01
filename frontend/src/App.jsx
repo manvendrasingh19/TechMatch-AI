@@ -1047,15 +1047,6 @@ function App() {
             <span className="nav-status-dot" />
             AI MATCHING READY
           </span>
-          {currentUser && (
-            <button
-              className="login-btn"
-              onClick={() => setShowApplicationTracker(true)}
-            >
-              My Applications
-            </button>
-          )}
-
           <button className="nav-cta" onClick={openUpload}>
             Get Started <ArrowRight size={16} />
           </button>
@@ -1444,12 +1435,18 @@ function App() {
             {currentUser && (
               <section className="personal-profile">
           <div className="profile-heading">
-            <span>PERSONALIZATION</span>
-            <h2>Your Job Preferences</h2>
-            <p>
-              Customize your preferences to make your job
-              recommendations more relevant.
-            </p>
+            <div className="profile-heading-main">
+              <div className="profile-heading-icon" aria-hidden="true">✦</div>
+              <div>
+                <span>PERSONALIZATION</span>
+                <h2>Your Job Preferences</h2>
+                <p>
+                  Fine-tune your career interests so TechMatch AI can surface
+                  opportunities that fit the way you want to work.
+                </p>
+              </div>
+            </div>
+            <span className="profile-settings-badge">PROFILE SETTINGS</span>
           </div>
 
           <div className="profile-form">
@@ -1490,7 +1487,10 @@ function App() {
             </div>
 
             <div className="profile-categories">
-              <label>Preferred Technology Categories</label>
+              <div className="profile-section-label">
+                <label>Preferred Technology Categories</label>
+                <span>Select all areas that interest you</span>
+              </div>
 
               <div className="filter-skill-options">
                 {[
@@ -1517,7 +1517,10 @@ function App() {
             </div>
 
             <div className="profile-resume-info">
-              <h3>Resume Skills</h3>
+              <div className="profile-section-label">
+                <h3>Resume Skills</h3>
+                <span>Skills detected from your uploaded resume</span>
+              </div>
 
               {analysis?.skills?.length ? (
                 <div className="skill-list">
@@ -1786,12 +1789,21 @@ function App() {
                 )}
                 
                 {resumeReview && (
-                  <button
-                    className="export-report-button"
-                    onClick={exportCareerReport}
-                  >
-                    ↓ Download Career Report (PDF)
-                  </button>
+                  <div className="export-report-actions">
+                    <div className="export-report-copy">
+                      <strong>Your career report is ready</strong>
+                      <span>Download your resume review and career insights as a PDF.</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="export-report-button"
+                      onClick={exportCareerReport}
+                    >
+                      <span className="export-report-icon" aria-hidden="true">↓</span>
+                      Download Career Report
+                      <span className="export-report-format">PDF</span>
+                    </button>
+                  </div>
                 )}
 
               </section>
@@ -2130,7 +2142,15 @@ function App() {
 
 
 
-                <h2>Your AI Job Recommendations</h2>
+                <div className="job-results-heading">
+                  <div className="job-results-heading-icon" aria-hidden="true">✦</div>
+                  <div className="job-results-heading-copy">
+                    <span className="job-results-eyebrow">PERSONALIZED FOR YOUR PROFILE</span>
+                    <h2>Your AI Job Recommendations</h2>
+                    <p>Explore roles ranked by how closely they match your resume and selected preferences.</p>
+                  </div>
+                  <span className="job-results-count">{jobs.length} {jobs.length === 1 ? "MATCH" : "MATCHES"}</span>
+                </div>
                 {sourceWarnings.length > 0 && (
                   <div className="source-warning">
                     <strong>Some sources could not be reached:</strong>
