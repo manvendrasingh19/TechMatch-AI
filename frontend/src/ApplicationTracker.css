@@ -1,0 +1,492 @@
+
+/* =========================================
+   APPLICATION TRACKER - MODERN DASHBOARD
+========================================= */
+
+.application-tracker {
+  --tracker-primary: #7454e8;
+  --tracker-primary-dark: #6040d0;
+  --tracker-text: #1e1b2e;
+  --tracker-muted: #77758a;
+  --tracker-border: #e9e7f0;
+  --tracker-surface: #ffffff;
+  --tracker-background: #f8f7fc;
+
+  width: 100%;
+  max-width: 1200px;
+  margin: 35px auto;
+  padding: 30px;
+  box-sizing: border-box;
+  color: var(--tracker-text);
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+}
+
+.application-tracker * {
+  box-sizing: border-box;
+}
+
+/* =========================================
+   HEADER
+========================================= */
+
+.tracker-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.tracker-eyebrow {
+  color: var(--tracker-primary) !important;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  margin: 0 0 10px;
+}
+
+.tracker-heading h2 {
+  color: var(--tracker-text) !important;
+  font-size: clamp(27px, 3vw, 36px);
+  font-weight: 800;
+  letter-spacing: -1.2px;
+  margin: 0 0 9px;
+}
+
+.tracker-heading > div > p:last-child {
+  color: var(--tracker-muted) !important;
+  font-size: 15px;
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* Back button */
+
+.tracker-close {
+  background: var(--tracker-primary);
+  color: #ffffff;
+  border: none;
+  padding: 12px 21px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(116, 84, 232, 0.16);
+}
+
+.tracker-close:hover {
+  background: var(--tracker-primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 7px 18px rgba(116, 84, 232, 0.25);
+}
+
+/* =========================================
+   STATISTICS DASHBOARD
+========================================= */
+
+.tracker-statistics {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 15px;
+  margin-bottom: 30px;
+}
+
+.tracker-stat {
+  position: relative;
+  overflow: hidden;
+  background: var(--tracker-surface);
+  border: 1px solid var(--tracker-border);
+  border-radius: 15px;
+  padding: 21px 19px;
+  min-height: 112px;
+  box-shadow: 0 3px 12px rgba(30, 27, 46, 0.035);
+  transition: all 0.25s ease;
+}
+
+.tracker-stat:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 9px 24px rgba(30, 27, 46, 0.08);
+  border-color: #d8d0f5;
+}
+
+.tracker-stat span {
+  display: block;
+  color: var(--tracker-muted) !important;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 13px;
+}
+
+.tracker-stat strong {
+  display: block;
+  color: var(--tracker-text) !important;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* Individual statistic accents */
+
+.tracker-stat:nth-child(1) {
+  border-top: 3px solid #7454e8;
+}
+
+.tracker-stat:nth-child(2) {
+  border-top: 3px solid #3b82f6;
+}
+
+.tracker-stat:nth-child(3) {
+  border-top: 3px solid #f59e0b;
+}
+
+.tracker-stat:nth-child(4) {
+  border-top: 3px solid #8b5cf6;
+}
+
+.tracker-stat:nth-child(5) {
+  border-top: 3px solid #10b981;
+}
+
+.tracker-stat:nth-child(6) {
+  border-top: 3px solid #ef647c;
+}
+
+/* =========================================
+   SUCCESS AND ERROR MESSAGES
+========================================= */
+
+.tracker-message,
+.tracker-error {
+  padding: 13px 17px;
+  border-radius: 10px;
+  margin: 0 0 20px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.tracker-message {
+  color: #087c50 !important;
+  background: #e9f9f1;
+  border: 1px solid #c7f0dc;
+}
+
+.tracker-error {
+  color: #c53030 !important;
+  background: #fff0f0;
+  border: 1px solid #ffd2d2;
+}
+
+/* =========================================
+   APPLICATION LIST
+========================================= */
+
+.tracker-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+/* =========================================
+   APPLICATION CARD
+========================================= */
+
+.tracker-card {
+  position: relative;
+  background: var(--tracker-surface);
+  border: 1px solid var(--tracker-border);
+  border-radius: 17px;
+  padding: 26px;
+  box-shadow: 0 4px 15px rgba(30, 27, 46, 0.045);
+  transition: all 0.25s ease;
+  animation: trackerFadeIn 0.35s ease;
+}
+
+.tracker-card:hover {
+  border-color: #d8cff8;
+  box-shadow: 0 10px 28px rgba(30, 27, 46, 0.075);
+  transform: translateY(-2px);
+}
+
+@keyframes trackerFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Card heading */
+
+.tracker-card-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.tracker-card h3 {
+  color: var(--tracker-text) !important;
+  font-size: 19px;
+  font-weight: 750;
+  letter-spacing: -0.3px;
+  margin: 0 0 8px;
+}
+
+.tracker-card-heading p {
+  color: var(--tracker-primary) !important;
+  font-size: 15px;
+  font-weight: 650;
+  margin: 0 0 5px;
+}
+
+.tracker-card-heading small {
+  display: block;
+  color: var(--tracker-muted) !important;
+  font-size: 13px;
+  margin-top: 5px;
+}
+
+/* Remove button */
+
+.tracker-delete {
+  flex-shrink: 0;
+  background: #fff0f1;
+  color: #dc455b;
+  border: 1px solid #ffe0e4;
+  border-radius: 9px;
+  padding: 10px 17px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tracker-delete:hover {
+  background: #dc455b;
+  color: white;
+  border-color: #dc455b;
+}
+
+/* =========================================
+   INPUT CONTROLS
+========================================= */
+
+.tracker-controls {
+  display: grid;
+  gap: 19px;
+  margin-top: 25px;
+}
+
+.tracker-controls label {
+  display: grid;
+  gap: 9px;
+  color: #49445d !important;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Dropdown and textarea */
+
+.tracker-controls select,
+.tracker-controls textarea {
+  width: 100%;
+  padding: 13px 15px;
+  border: 1px solid #e3e0eb;
+  border-radius: 10px;
+  background: #fbfaff;
+  color: var(--tracker-text);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.tracker-controls select {
+  cursor: pointer;
+  min-height: 47px;
+}
+
+.tracker-controls textarea {
+  min-height: 95px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.tracker-controls textarea::placeholder {
+  color: #aaa6b8;
+}
+
+.tracker-controls select:focus,
+.tracker-controls textarea:focus {
+  border-color: var(--tracker-primary);
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(116, 84, 232, 0.10);
+}
+
+/* Save notes button */
+
+.tracker-save {
+  justify-self: start;
+  background: var(--tracker-primary);
+  color: white;
+  border: none;
+  border-radius: 9px;
+  padding: 12px 21px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.tracker-save:hover {
+  background: var(--tracker-primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 14px rgba(116, 84, 232, 0.22);
+}
+
+.tracker-save:active,
+.tracker-close:active {
+  transform: scale(0.97);
+}
+
+/* =========================================
+   ORIGINAL JOB LINK
+========================================= */
+
+.tracker-apply-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 23px;
+  color: var(--tracker-primary) !important;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.tracker-apply-link:hover {
+  color: var(--tracker-primary-dark) !important;
+  text-decoration: underline;
+}
+
+/* =========================================
+   LAST UPDATED
+========================================= */
+
+.tracker-updated {
+  display: block;
+  margin-top: 18px;
+  padding-top: 15px;
+  border-top: 1px solid #efedf4;
+  color: #9290a1 !important;
+  font-size: 12px;
+}
+
+/* =========================================
+   EMPTY STATE
+========================================= */
+
+.tracker-empty {
+  background: var(--tracker-surface);
+  border: 1px dashed #d9d3ed;
+  border-radius: 17px;
+  padding: 65px 25px;
+  text-align: center;
+}
+
+.tracker-empty h3 {
+  color: var(--tracker-text) !important;
+  font-size: 21px;
+  margin: 0 0 12px;
+}
+
+.tracker-empty p {
+  color: var(--tracker-muted) !important;
+  font-size: 14px;
+  line-height: 1.7;
+  margin: 0;
+}
+
+/* =========================================
+   RESPONSIVE DESIGN
+========================================= */
+
+@media (max-width: 1000px) {
+  .tracker-statistics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 650px) {
+  .application-tracker {
+    padding: 18px;
+    margin: 15px auto;
+  }
+
+  .tracker-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    margin-bottom: 25px;
+  }
+
+  .tracker-heading h2 {
+    font-size: 27px;
+  }
+
+  .tracker-statistics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 11px;
+  }
+
+  .tracker-stat {
+    min-height: 100px;
+    padding: 16px;
+  }
+
+  .tracker-stat strong {
+    font-size: 26px;
+  }
+
+  .tracker-card {
+    padding: 19px;
+  }
+
+  .tracker-card-heading {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .tracker-delete {
+    align-self: flex-start;
+  }
+
+  .tracker-save {
+    width: 100%;
+  }
+}
+
+@media (max-width: 380px) {
+  .tracker-statistics {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Accessibility */
+
+@media (prefers-reduced-motion: reduce) {
+  .application-tracker *,
+  .application-tracker *::before,
+  .application-tracker *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,13 +1,14 @@
-
+import ApplicationTracker from "./ApplicationTracker";
 import { useEffect } from "react";
 import { useRef, useState } from "react";
 import {
   ArrowRight, Search, FileText, Sparkles,
   BriefcaseBusiness, Target, TrendingUp,
   Code2, BrainCircuit, Database, Cloud,
-  ShieldCheck, Menu, X, Upload, CheckCircle2
+  ShieldCheck, Menu, X, CheckCircle2
 } from "lucide-react";
 import "./App.css";
+import { jsPDF } from "jspdf";
 
 function App() {
   const fileInput = useRef(null);
@@ -59,7 +60,7 @@ function App() {
   const [authPassword, setAuthPassword] = useState("");
 
 
-  const [profile, setProfile] = useState(null);
+  const [, setProfile] = useState(null);
   const [preferredLocation, setPreferredLocation] = useState("India");
 
   const [preferredCategories, setPreferredCategories] = useState([
@@ -71,7 +72,16 @@ function App() {
   const [profileMessage, setProfileMessage] = useState("");
   const [profileLoading, setProfileLoading] = useState(false);
 
+  const [showApplicationTracker, setShowApplicationTracker] =
+    useState(false);
 
+  const [resumeReview, setResumeReview] = useState(null);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewError, setReviewError] = useState("");
+
+  const [tailorResult, setTailorResult] = useState(null);
+  const [tailorLoading, setTailorLoading] = useState(false);
+  const [tailorError, setTailorError] = useState("");
 
   const categories = [
     { name: "Software Development", icon: Code2 },
@@ -159,49 +169,67 @@ function App() {
     setSavedJobs([]);
     setAuthPassword("");
     setAuthError("");
-  };
-
-
-  const loadMyProfile = async (token) => {
-    try {
-      const response = await fetch(
-        "http://127.0.0.1:8000/api/auth/me",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Login session expired.");
-      }
-
-      const data = await response.json();
-      setCurrentUser(data.user);
-      await loadUserProfile(token);
-      await loadSavedJobs(token);
-
-    } catch (error) {
-      console.error("Profile loading error:", error);
-      handleLogout();
-    }
+    setResume(null);
+    setAnalysis(null);
+    setJobs([]);
+    setResumeReview(null);
+    setTailorResult(null);
+    setHasSearchedJobs(false);
+    setShowSavedJobs(false);
+    setShowApplicationTracker(false);
   };
 
 
   useEffect(() => {
-    if (authToken) {
-      loadMyProfile(authToken);
-    } else {
-      setCurrentUser(null);
-      setProfile(null);
-    }
+    if (!authToken) return;
+
+    let isActive = true;
+
+    const restoreSession = async () => {
+      try {
+        const response = await fetch(
+          "http://127.0.0.1:8000/api/auth/me",
+          {
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Login session expired.");
+        }
+
+        const data = await response.json();
+
+        if (!isActive) return;
+
+        setCurrentUser(data.user);
+
+        await loadUserProfile(authToken);
+
+        if (!isActive) return;
+
+        await loadSavedJobs(authToken);
+      } catch (error) {
+        if (!isActive) return;
+
+        console.error("Profile loading error:", error);
+        handleLogout();
+      }
+    };
+
+    restoreSession();
+
+    return () => {
+      isActive = false;
+    };
   }, [authToken]);
 
 
 
-  
-  const loadUserProfile = async (token = authToken) => {
+
+  async function loadUserProfile(token = authToken) {
     if (!token) return;
 
     try {
@@ -231,7 +259,7 @@ function App() {
       console.error("Preference loading error:", error);
       setProfileMessage(error.message);
     }
-  };
+  }
 
 
   const handleSaveProfile = async () => {
@@ -294,55 +322,78 @@ function App() {
   };
 
 
-
-
-  const handleFindJobs = async () => {
+  const handleResumeReview = async () => {
+    if (!requireLogin()) return;
     if (!analysis?.extracted_text) {
-      setMatchError("Please upload and analyze your resume first.");
+      setReviewError("Please upload and analyze your resume first.");
       return;
     }
 
-    setMatching(true);
-    setMatchError("");
-    setHasSearchedJobs(false);
-    setJobs([]);
+    setReviewLoading(true);
+    setReviewError("");
+    setResumeReview(null);
 
     try {
+      const targetSkills = [
+        ...new Set(
+          jobs.flatMap((job) => job.missing_skills || [])
+        ),
+      ];
+
       const response = await fetch(
-        "http://127.0.0.1:8000/api/jobs/recommend-live",
+        "http://127.0.0.1:8000/api/resume/improve",
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${authToken}`,
           },
           body: JSON.stringify({
             resume_text: analysis.extracted_text,
-            limit: 10,
+            target_skills: targetSkills,
           }),
         }
       );
 
       const data = await response.json();
-      setTotalJobsCollected(data.total_jobs_after_filters ?? 0);
-      <p>
-        {totalJobsCollected} jobs passed your filters.
-        Showing {jobs.length} AI-ranked recommendations.
-      </p>
+
       if (!response.ok) {
-        throw new Error(data.detail || "Could not find job recommendations.");
+        throw new Error(
+          data.detail || "Could not review your resume."
+        );
       }
 
-      setJobs(data.recommendations || []);
-      setHasSearchedJobs(true);
+      setResumeReview(data);
     } catch (error) {
-      setMatchError(error.message || "Something went wrong.");
+      setReviewError(
+        error.message || "Unable to connect to the backend."
+      );
     } finally {
-      setMatching(false);
+      setReviewLoading(false);
     }
   };
 
 
+  const requireLogin = () => {
+    if (!authToken || !currentUser) {
+      setAuthError("Please log in or create an account to access this feature.");
+
+      document.getElementById("auth-section")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+
+      return false;
+    }
+
+    return true;
+  };
+
   const handleFile = async (event) => {
+    if (!requireLogin()) {
+      event.target.value = "";
+      return;
+    }
     const file = event.target.files?.[0];
 
     if (!file) return;
@@ -376,7 +427,10 @@ function App() {
         "http://127.0.0.1:8000/api/resume/analyze",
         {
           method: "POST",
-          body: formData
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: formData,
         }
       );
 
@@ -425,7 +479,7 @@ function App() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${authToken}`
+            Authorization: `Bearer ${authToken}`,
           },
           body: JSON.stringify({
             resume_text: analysis.extracted_text,
@@ -445,10 +499,6 @@ function App() {
 
       const data = await response.json();
       setTotalJobsCollected(data.total_jobs_after_filters ?? 0);
-      <p>
-        {totalJobsCollected} jobs passed your filters.
-        Showing {jobs.length} AI-ranked recommendations.
-      </p>
 
       if (!response.ok) {
         throw new Error(data.detail || "Job search failed.");
@@ -481,8 +531,8 @@ function App() {
     );
   };
 
-  
-  const loadSavedJobs = async (token = authToken) => {
+
+  async function loadSavedJobs(token = authToken) {
     if (!token) return;
 
     try {
@@ -505,7 +555,248 @@ function App() {
     } catch (error) {
       setMatchError(error.message);
     }
+  }
+
+
+
+  const exportCareerReport = () => {
+    if (!analysis || !resumeReview) {
+      alert("Please analyze and review your resume before exporting.");
+      return;
+    }
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    const margin = 18;
+    const contentWidth = pageWidth - margin * 2;
+    let y = 20;
+
+    const addPageIfNeeded = (requiredHeight = 12) => {
+      if (y + requiredHeight > pageHeight - 18) {
+        doc.addPage();
+        y = 20;
+      }
+    };
+
+    const addTitle = (text) => {
+      addPageIfNeeded(16);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.text(text, margin, y);
+      y += 10;
+    };
+
+    const addHeading = (text) => {
+      addPageIfNeeded(12);
+      y += 4;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.text(text, margin, y);
+      y += 7;
+    };
+
+    const addText = (text) => {
+      const lines = doc.splitTextToSize(
+        String(text || ""),
+        contentWidth
+      );
+
+      addPageIfNeeded(lines.length * 6 + 4);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.text(lines, margin, y);
+      y += lines.length * 6 + 3;
+    };
+
+    const addList = (items) => {
+      if (!items?.length) {
+        addText("None identified.");
+        return;
+      }
+
+      items.forEach((item) => {
+        addText(`• ${item}`);
+      });
+    };
+
+    // Report title
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.text("TechMatch AI", margin, y);
+    y += 9;
+
+    doc.setFontSize(14);
+    doc.text("Personal Career Analysis Report", margin, y);
+    y += 8;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text(
+      `Generated: ${new Date().toLocaleDateString()}`,
+      margin,
+      y
+    );
+    y += 12;
+
+    // Resume overview
+    addTitle("1. Resume Overview");
+    addText(`Words analyzed: ${resumeReview.word_count}`);
+    addText(
+      `Resume quality score: ${resumeReview.quality_score}/100`
+    );
+    addText(
+      `Sections found: ${resumeReview.sections_found.join(", ") || "None"}`
+    );
+    addText(
+      `Sections to consider adding: ${
+        resumeReview.missing_sections.join(", ") || "None"
+      }`
+    );
+
+    // Category scores
+    addTitle("2. Category-wise Scores");
+
+    Object.entries(resumeReview.category_scores || {}).forEach(
+      ([category, result]) => {
+        addText(
+          `${category}: ${result.score}/${result.maximum}`
+        );
+      }
+    );
+
+    // Resume improvement
+    addTitle("3. Resume Improvement Suggestions");
+    addList(resumeReview.suggestions);
+
+    addHeading("Priority Recommendations");
+
+    if (resumeReview.priority_recommendations?.length) {
+      resumeReview.priority_recommendations.forEach((item) => {
+        addText(
+          `${item.priority} - ${item.category}: ${item.recommendation}`
+        );
+      });
+    } else {
+      addText("No additional priority recommendations.");
+    }
+
+    // Job-related keywords
+    addTitle("4. Job-Related Keywords to Review");
+    addList(resumeReview.keyword_suggestions);
+
+    // Skill gap analysis
+    addTitle("5. Career Skill Gaps");
+
+    const skillGaps = calculateSkillGaps();
+
+    if (skillGaps.length) {
+      skillGaps.forEach((item) => {
+        addText(`${item.skill}: found in ${item.count} job recommendations`);
+      });
+    } else {
+      addText(
+        "No skill gaps were identified from the current job recommendations."
+      );
+    }
+
+    // Selected job tailoring
+    addTitle("6. Job-Specific Resume Analysis");
+
+    if (tailorResult) {
+      addText(`Selected role: ${tailorResult.job_title}`);
+      addText(
+        `Skill match: ${tailorResult.skill_match_percentage}%`
+      );
+
+      addHeading("Matched Skills");
+      addList(tailorResult.matched_skills);
+
+      addHeading("Skills Not Found in Resume");
+      addList(tailorResult.missing_skills);
+
+      addHeading("Relevant Resume Evidence");
+
+      if (tailorResult.relevant_resume_evidence?.length) {
+        tailorResult.relevant_resume_evidence.forEach((item) => {
+          addText(item.text);
+          addText(`Related skills: ${item.skills.join(", ")}`);
+        });
+      } else {
+        addText("No relevant evidence was identified.");
+      }
+
+      addHeading("Job-Specific Suggestions");
+      addList(tailorResult.suggestions);
+    } else {
+      addText(
+        "No job-specific tailoring analysis is available. Use the Tailor Resume button on a job card to include this section in a future report."
+      );
+    }
+
+    // Disclaimer
+    addTitle("7. Important Note");
+    addText(
+      "This report contains rule-based resume checks and job matching results. It is not an official ATS evaluation or a guarantee of employment. Verify all information and include only skills, experience, and qualifications that are accurate."
+    );
+
+    doc.save("TechMatch-AI-Career-Report.pdf");
   };
+
+  const handleTailorResume = async (job, index) => {
+    if (!requireLogin()) return;
+    if (!analysis?.extracted_text) {
+      setTailorError("Please upload and analyze your resume first.");
+      return;
+    }
+
+    setTailorLoading(true);
+    setTailorError("");
+    setTailorResult(null);
+
+    try {
+      const response = await fetch(
+        "http://127.0.0.1:8000/api/resume/tailor",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: JSON.stringify({
+            resume_text: analysis.extracted_text,
+            job_title: job.title || "Selected job",
+            job_description: job.description || "",
+            job_skills: [
+              ...(job.skills || []),
+              ...(job.matched_skills || []),
+              ...(job.missing_skills || []),
+            ],
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.detail || "Could not tailor your resume for this job."
+        );
+      }
+
+      setTailorResult({
+        jobKey: job.id || index,
+        ...data,
+      });
+    } catch (error) {
+      setTailorError(error.message || "Something went wrong.");
+    } finally {
+      setTailorLoading(false);
+    }
+  };
+
 
 
   const handleSaveJob = async (job) => {
@@ -543,6 +834,42 @@ function App() {
   };
 
 
+  const handleAddToApplications = async (job) => {
+    if (!authToken) {
+      setAuthError("Please log in to track applications.");
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        "http://127.0.0.1:8000/api/applications",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authToken}`
+          },
+          body: JSON.stringify({
+            job,
+            status: "Interested",
+            notes: ""
+          })
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "Could not add job to tracker.");
+      }
+
+      alert("Job added to your Application Tracker!");
+    } catch (error) {
+      setMatchError(error.message);
+    }
+  };
+
+
   const handleRemoveSavedJob = async (jobId) => {
     if (!authToken) {
       setAuthError("Please log in to manage saved jobs.");
@@ -572,11 +899,87 @@ function App() {
   };
 
 
+
+  const skillLearningResources = {
+    "java": {
+      name: "Official Java Tutorials",
+      url: "https://dev.java/learn/"
+    },
+    "angular": {
+      name: "Official Angular Tutorials",
+      url: "https://angular.dev/tutorials"
+    },
+    "node.js": {
+      name: "Official Node.js Learning",
+      url: "https://nodejs.org/learn"
+    },
+    "express": {
+      name: "Official Express Guide",
+      url: "https://expressjs.com/en/starter/installing/"
+    },
+    "postgresql": {
+      name: "Official PostgreSQL Tutorial",
+      url: "https://www.postgresql.org/docs/current/tutorial.html"
+    },
+    "mysql": {
+      name: "Official MySQL Tutorial",
+      url: "https://dev.mysql.com/doc/mysql-tutorial-excerpt/8.0/en/"
+    },
+    "django": {
+      name: "Official Django Tutorial",
+      url: "https://docs.djangoproject.com/en/stable/intro/tutorial01/"
+    }
+  };
+
+  const calculateSkillGaps = () => {
+    const skillFrequency = {};
+
+    jobs.forEach((job) => {
+      (job.missing_skills || []).forEach((skill) => {
+        const normalizedSkill = skill.trim();
+        const key = normalizedSkill.toLowerCase();
+
+        if (!key) return;
+
+        if (!skillFrequency[key]) {
+          skillFrequency[key] = {
+            name: normalizedSkill,
+            count: 0
+          };
+        }
+
+        skillFrequency[key].count += 1;
+      });
+    });
+
+    return Object.values(skillFrequency)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+  };
+
+  const getSkillPriority = (count) => {
+    // Small samples are not sufficient to establish demand.
+    if (jobs.length < 5) {
+      return "Early signal";
+    }
+
+    const percentage = count / jobs.length;
+
+    if (percentage >= 0.6) return "High priority";
+    if (percentage >= 0.3) return "Medium priority";
+
+    return "Explore";
+  };
+
+
   const openUpload = () => {
+    if (!requireLogin()) return;
+
     fileInput.current?.click();
   };
 
   return (
+
     <div className="app">
 
       <nav className="navbar">
@@ -600,14 +1003,24 @@ function App() {
         </div>
 
         <div className="nav-actions">
-          <button className="login-btn" onClick={() => alert("Login module coming soon!")}>Log in</button>
-          <button className="nav-cta" onClick={openUpload}>Get Started <ArrowRight size={16} /></button>
+          {currentUser && (
+            <button
+              className="login-btn"
+              onClick={() => setShowApplicationTracker(true)}
+            >
+              My Applications
+            </button>
+          )}
+
+          <button className="nav-cta" onClick={openUpload}>
+            Get Started <ArrowRight size={16} />
+          </button>
         </div>
       </nav>
 
 
 
-      <section className="auth-section">
+      <section className="auth-section" id="auth-section">
         {currentUser ? (
           <div className="user-profile-bar">
             <div>
@@ -707,10 +1120,117 @@ function App() {
         )}
       </section>
 
+    {showApplicationTracker && currentUser ? (
+      <ApplicationTracker
+        authToken={authToken}
+        onClose={() => setShowApplicationTracker(false)}
+      />
+    ) : (
+      <>
 
+      <main>
+        <section className="hero">
+          <div className="hero-content">
+            <div className="announcement">
+              <Sparkles size={15} />
+              AI-powered career discovery
+            </div>
 
-      {currentUser && (
-        <section className="personal-profile">
+            <h1>
+              Find the right tech job.
+              <span> Let AI do the matching.</span>
+            </h1>
+
+            <p className="hero-description">
+              Upload your resume once. Discover relevant technology jobs
+              from multiple sources, get personalized recommendations,
+              and find the opportunities that match your skills.
+            </p>
+
+            <div className="hero-actions">
+              <button className="primary-btn" onClick={openUpload}>
+                Upload Your Resume <ArrowRight size={18} />
+              </button>
+              <a href="#how-it-works" className="secondary-btn">
+                Explore how it works
+              </a>
+            </div>
+
+            <div className="hero-trust">
+              <ShieldCheck size={17} />
+              Your career journey, powered by intelligent matching.
+            </div>
+          </div>
+
+          <div className="hero-visual">
+            <div className="visual-glow"></div>
+            <div className="dashboard-card">
+              <div className="mock-top">
+                <div>
+                  <span className="muted-label">YOUR CAREER DASHBOARD</span>
+                  <h3>Recommended for you</h3>
+                </div>
+                <div className="mock-avatar">TM</div>
+              </div>
+
+              <div className="profile-match">
+                <div className="profile-icon"><FileText size={25} /></div>
+                <div>
+                  <strong>Resume analyzed</strong>
+                  <p>Skills and experience identified</p>
+                </div>
+                <CheckCircle2 className="success-icon" size={20} />
+              </div>
+
+              <div className="match-heading">
+                <span>Top job matches</span>
+                <span className="match-count">Personalized</span>
+              </div>
+
+              <div className="job-preview">
+                <div className="company-icon purple">AI</div>
+                <div className="job-info">
+                  <strong>Machine Learning Intern</strong>
+                  <p>Technology Company · Remote</p>
+                </div>
+                <div className="score">94%</div>
+              </div>
+
+              <div className="job-preview">
+                <div className="company-icon blue">DS</div>
+                <div className="job-info">
+                  <strong>Data Science Intern</strong>
+                  <p>Analytics Company · Hybrid</p>
+                </div>
+                <div className="score">89%</div>
+              </div>
+
+              <div className="job-preview">
+                <div className="company-icon green">SE</div>
+                <div className="job-info">
+                  <strong>Software Engineer Intern</strong>
+                  <p>Product Company · On-site</p>
+                </div>
+                <div className="score">85%</div>
+              </div>
+
+              <div className="mock-footer">
+                <Sparkles size={16} />
+                AI-powered personalized recommendations
+              </div>
+            </div>
+
+            <div className="floating-card">
+              <Target size={20} />
+              <div><strong>Smart Matching</strong><p>Find your best fit</p></div>
+            </div>
+          </div>
+        </section>
+
+        <section className="career-workspace" aria-label="Your career workspace">
+          <div className="career-workspace-inner">
+            {currentUser && (
+              <section className="personal-profile">
           <div className="profile-heading">
             <span>PERSONALIZATION</span>
             <h2>Your Job Preferences</h2>
@@ -814,38 +1334,11 @@ function App() {
               <p className="profile-message">{profileMessage}</p>
             )}
           </div>
-        </section>
-      )}
+              </section>
+            )}
 
 
 
-      <main>
-        <section className="hero">
-          <div className="hero-content">
-            <div className="announcement">
-              <Sparkles size={15} />
-              AI-powered career discovery
-            </div>
-
-            <h1>
-              Find the right tech job.
-              <span> Let AI do the matching.</span>
-            </h1>
-
-            <p className="hero-description">
-              Upload your resume once. Discover relevant technology jobs
-              from multiple sources, get personalized recommendations,
-              and find the opportunities that match your skills.
-            </p>
-
-            <div className="hero-actions">
-              <button className="primary-btn" onClick={openUpload}>
-                Upload Your Resume <ArrowRight size={18} />
-              </button>
-              <a href="#how-it-works" className="secondary-btn">
-                Explore how it works
-              </a>
-            </div>
 
             <input
               ref={fileInput}
@@ -855,7 +1348,7 @@ function App() {
               onChange={handleFile}
             />
 
-            
+
             {resume && (
               <div className="upload-status">
                 <FileText size={19} />
@@ -912,7 +1405,187 @@ function App() {
               </div>
             )}
 
-            
+
+            {analysis?.extracted_text && (
+              <section className="resume-advisor">
+                <div className="resume-advisor-heading">
+                  <span className="search-eyebrow">
+                    AI RESUME REVIEW
+                  </span>
+                  <h2>Improve Your Resume</h2>
+                  <p>
+                    Get practical suggestions to strengthen your
+                    technology resume.
+                  </p>
+                </div>
+
+                <button
+                  className="primary-btn"
+                  onClick={handleResumeReview}
+                  disabled={reviewLoading}
+                >
+                  {reviewLoading
+                    ? "Reviewing Resume..."
+                    : "Review My Resume"}
+                </button>
+
+                {reviewError && (
+                  <p className="analysis-error">{reviewError}</p>
+                )}
+
+                {resumeReview && (
+                  <div className="resume-advisor-results">
+
+                  <div className="resume-quality-score">
+                    <div className="quality-score-circle">
+                      <strong>{resumeReview.quality_score}</strong>
+                      <span>/ 100</span>
+                    </div>
+
+                    <div className="quality-score-description">
+                      <h3>Resume Quality Score</h3>
+                      <p>
+                        {resumeReview.quality_score >= 80
+                          ? "Strong foundation! Keep refining your resume."
+                          : resumeReview.quality_score >= 60
+                          ? "Good start. A few improvements can strengthen your resume."
+                          : resumeReview.quality_score >= 40
+                          ? "Your resume has room for improvement."
+                          : "Focus on building a stronger and more complete resume."}
+                      </p>
+                      <small>
+                        This is an estimated rule-based score, not an official ATS score.
+                      </small>
+                    </div>
+                  </div>
+
+                  <div className="resume-category-scores">
+                    <h3>Category-wise Score</h3>
+
+                    {Object.entries(resumeReview.category_scores).map(
+                      ([category, result]) => (
+                        <div className="category-score-row" key={category}>
+                          <div className="category-score-heading">
+                            <span>{category}</span>
+                            <strong>
+                              {result.score}/{result.maximum}
+                            </strong>
+                          </div>
+
+                          <div className="category-score-track">
+                            <div
+                              className="category-score-fill"
+                              style={{
+                                width: `${
+                                  (result.score / result.maximum) * 100
+                                }%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )
+                    )}
+                  </div>
+
+                  <div className="priority-recommendations">
+                    <h3>Priority Recommendations</h3>
+
+                    {resumeReview.priority_recommendations.length > 0 ? (
+                      resumeReview.priority_recommendations.map((item, index) => (
+                        <div className="priority-item" key={index}>
+                          <div className="priority-item-heading">
+                            <strong>{item.category}</strong>
+                            <span
+                              className={`priority-label ${item.priority.toLowerCase()}`}
+                            >
+                              {item.priority}
+                            </span>
+                          </div>
+                          <p>{item.recommendation}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <p>No additional priority recommendations at this time.</p>
+                    )}
+                  </div>
+
+                    <div className="resume-review-stats">
+                      <div>
+                        <strong>{resumeReview.word_count}</strong>
+                        <span>Words analyzed</span>
+                      </div>
+                      <div>
+                        <strong>{resumeReview.sections_found.length}</strong>
+                        <span>Sections found</span>
+                      </div>
+                      <div>
+                        <strong>{resumeReview.missing_sections.length}</strong>
+                        <span>Sections to review</span>
+                      </div>
+                    </div>
+
+                    <h3>Sections Found</h3>
+                    <div className="skills-list">
+                      {resumeReview.sections_found.map((section) => (
+                        <span className="skill-tag" key={section}>
+                          {section}
+                        </span>
+                      ))}
+                    </div>
+
+                    <h3>Sections to Consider Adding</h3>
+                    {resumeReview.missing_sections.length > 0 ? (
+                      <ul>
+                        {resumeReview.missing_sections.map((section) => (
+                          <li key={section}>{section}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p>All checked resume sections were detected.</p>
+                    )}
+
+                    <h3>Improvement Suggestions</h3>
+                    <ul>
+                      {resumeReview.suggestions.map((suggestion, index) => (
+                        <li key={index}>{suggestion}</li>
+                      ))}
+                    </ul>
+
+                    <h3>Job-Related Keywords to Review</h3>
+                    {resumeReview.keyword_suggestions.length > 0 ? (
+                      <div className="skills-list">
+                        {resumeReview.keyword_suggestions.map((skill) => (
+                          <span className="skill-tag" key={skill}>
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p>
+                        No additional keywords were identified from the
+                        current job recommendations.
+                      </p>
+                    )}
+
+                    <p className="resume-review-note">
+                      {resumeReview.review_note}
+                    </p>
+                  </div>
+                )}
+
+                {resumeReview && (
+                  <button
+                    className="export-report-button"
+                    onClick={exportCareerReport}
+                  >
+                    ↓ Download Career Report (PDF)
+                  </button>
+                )}
+
+              </section>
+            )}
+
+
             {analysis?.extracted_text && (
               <section className="search-dashboard">
                 <div className="search-heading">
@@ -1148,6 +1821,87 @@ function App() {
 
             {hasSearchedJobs && (
               <section className="job-results">
+
+
+              <div className="skill-gap-section">
+                <div className="skill-gap-heading">
+                  <span>AI CAREER INSIGHTS</span>
+                  <h2>Your Resume Skill Gap Analysis</h2>
+                  <p>
+                    Skills frequently requested by your recommended
+                    jobs that were not detected in your resume.
+                  </p>
+                </div>
+
+                {jobs.length < 5 && (
+                  <p className="skill-gap-notice">
+                    Small sample: these insights are based on only{" "}
+                    {jobs.length} recommended jobs. Search more jobs
+                    for more reliable skill-priority estimates.
+                  </p>
+                )}
+
+                {calculateSkillGaps().length > 0 ? (
+                  <div className="skill-gap-grid">
+                    {calculateSkillGaps().map((item, index) => {
+                      const resource =
+                        skillLearningResources[item.name.toLowerCase()];
+
+                      const fallbackUrl =
+                        "https://www.google.com/search?q=" +
+                        encodeURIComponent(
+                          item.name + " official documentation tutorial"
+                        );
+
+                      return (
+                        <div className="skill-gap-card" key={item.name}>
+                          <div className="skill-gap-number">
+                            {String(index + 1).padStart(2, "0")}
+                          </div>
+
+                          <h3>{item.name}</h3>
+
+                          <p>
+                            Appears in {item.count} of {jobs.length}
+                            {" "}recommended jobs
+                          </p>
+
+                          <div className="skill-gap-bar">
+                            <div
+                              style={{
+                                width: `${
+                                  (item.count / jobs.length) * 100
+                                }%`
+                              }}
+                            />
+                          </div>
+
+                          <span className="skill-gap-priority">
+                            {getSkillPriority(item.count)}
+                          </span>
+
+                          <a
+                            className="skill-learning-link"
+                            href={resource?.url || fallbackUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {resource?.name || "Find learning resources"}
+                            ↗
+                          </a>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p>
+                    No skill gaps identified in the current recommendations.
+                  </p>
+                )}
+              </div>
+
+
+
                 <h2>Your AI Job Recommendations</h2>
                 {sourceWarnings.length > 0 && (
                   <div className="source-warning">
@@ -1157,8 +1911,9 @@ function App() {
                     ))}
                   </div>
                 )}
-                <p>
-                  We found {jobs.length} matching opportunities for your resume.
+                <p className="job-results-summary">
+                  {totalJobsCollected} jobs passed your filters.
+                  {" "}Showing {jobs.length} AI-ranked recommendations.
                 </p>
 
                 {jobs.length === 0 ? (
@@ -1216,11 +1971,95 @@ function App() {
 
 
                         <button
+                          className="tailor-resume-button"
+                          onClick={() => handleTailorResume(job, index)}
+                          disabled={tailorLoading}
+                        >
+                          {tailorLoading ? "Analyzing..." : "✦ Tailor Resume"}
+                        </button>
+
+                        {tailorError && (
+                          <p className="tailor-error">{tailorError}</p>
+                        )}
+
+                        {tailorResult?.jobKey === (job.id || index) && (
+                          <div className="tailor-result">
+                            <h4>Resume Tailoring Analysis</h4>
+
+                            <div className="tailor-match-score">
+                              {tailorResult.skill_match_percentage}% Skill Match
+                            </div>
+
+                            <h5>Matched Skills</h5>
+                            <div className="skill-list">
+                              {tailorResult.matched_skills.length > 0 ? (
+                                tailorResult.matched_skills.map((skill) => (
+                                  <span className="matched-skill" key={skill}>
+                                    {skill}
+                                  </span>
+                                ))
+                              ) : (
+                                <p>No direct skill matches found.</p>
+                              )}
+                            </div>
+
+                            <h5>Skills Not Found in Resume</h5>
+                            <div className="skill-list">
+                              {tailorResult.missing_skills.length > 0 ? (
+                                tailorResult.missing_skills.map((skill) => (
+                                  <span className="missing-skill" key={skill}>
+                                    {skill}
+                                  </span>
+                                ))
+                              ) : (
+                                <p>All identified job skills were found in your resume.</p>
+                              )}
+                            </div>
+
+                            <h5>Relevant Resume Evidence</h5>
+                            {tailorResult.relevant_resume_evidence.length > 0 ? (
+                              <ul>
+                                {tailorResult.relevant_resume_evidence.map((item, index) => (
+                                  <li key={index}>
+                                    {item.text}
+                                    <div className="skill-list">
+                                      {item.skills.map((skill) => (
+                                        <span className="matched-skill" key={skill}>
+                                          {skill}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p>No relevant sentences were identified by the keyword check.</p>
+                            )}
+
+                            <h5>Suggestions for This Job</h5>
+                            <ul>
+                              {tailorResult.suggestions.map((suggestion, index) => (
+                                <li key={index}>{suggestion}</li>
+                              ))}
+                            </ul>
+
+                            <p className="tailor-note">{tailorResult.review_note}</p>
+                          </div>
+                        )}
+
+
+                        <button
                           className="save-job-button"
                           onClick={() => handleSaveJob(job)}
                           disabled={savingJobId === job.id}
                         >
                           {savingJobId === job.id ? "Saving..." : "☆ Save Job"}
+                        </button>
+                        <button
+                          className="save-job-button"
+                          onClick={() => handleAddToApplications(job)}
+                        >
+                          + Add to Applications
                         </button>
                         <a
                           className="apply-button"
@@ -1243,74 +2082,6 @@ function App() {
 
 
 
-            <div className="hero-trust">
-              <ShieldCheck size={17} />
-              Your career journey, powered by intelligent matching.
-            </div>
-          </div>
-
-          <div className="hero-visual">
-            <div className="visual-glow"></div>
-            <div className="dashboard-card">
-              <div className="mock-top">
-                <div>
-                  <span className="muted-label">YOUR CAREER DASHBOARD</span>
-                  <h3>Recommended for you</h3>
-                </div>
-                <div className="mock-avatar">TM</div>
-              </div>
-
-              <div className="profile-match">
-                <div className="profile-icon"><FileText size={25} /></div>
-                <div>
-                  <strong>Resume analyzed</strong>
-                  <p>Skills and experience identified</p>
-                </div>
-                <CheckCircle2 className="success-icon" size={20} />
-              </div>
-
-              <div className="match-heading">
-                <span>Top job matches</span>
-                <span className="match-count">Personalized</span>
-              </div>
-
-              <div className="job-preview">
-                <div className="company-icon purple">AI</div>
-                <div className="job-info">
-                  <strong>Machine Learning Intern</strong>
-                  <p>Technology Company · Remote</p>
-                </div>
-                <div className="score">94%</div>
-              </div>
-
-              <div className="job-preview">
-                <div className="company-icon blue">DS</div>
-                <div className="job-info">
-                  <strong>Data Science Intern</strong>
-                  <p>Analytics Company · Hybrid</p>
-                </div>
-                <div className="score">89%</div>
-              </div>
-
-              <div className="job-preview">
-                <div className="company-icon green">SE</div>
-                <div className="job-info">
-                  <strong>Software Engineer Intern</strong>
-                  <p>Product Company · On-site</p>
-                </div>
-                <div className="score">85%</div>
-              </div>
-
-              <div className="mock-footer">
-                <Sparkles size={16} />
-                AI-powered personalized recommendations
-              </div>
-            </div>
-
-            <div className="floating-card">
-              <Target size={20} />
-              <div><strong>Smart Matching</strong><p>Find your best fit</p></div>
-            </div>
           </div>
         </section>
 
@@ -1409,6 +2180,9 @@ function App() {
           </button>
         </section>
       </main>
+
+        </>
+      )}
 
       <footer>
         <a href="#" className="brand">

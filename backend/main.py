@@ -2,7 +2,7 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, Field
 from job_matcher import recommend_jobs, load_jobs, rank_jobs
 from job_sources import fetch_remotive_jobs
 from adzuna_source import fetch_adzuna_jobs
@@ -13,7 +13,6 @@ from user_profiles import get_profile, update_profile
 import re
 from fastapi import Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import EmailStr, Field
 from auth import (
     create_user,
     get_user_by_email,
@@ -23,8 +22,17 @@ from auth import (
     decode_access_token
 )
 
-from pydantic import Field
+from application_tracker import (
+    add_application,
+    get_applications,
+    update_application,
+    delete_application,
+    get_application_statistics,
+    VALID_STATUSES
+)
 
+from resume_advisor import review_resume
+from resume_tailor import tailor_resume
 class UserProfileRequest(BaseModel):
     preferred_location: str = Field(default="India", max_length=120)
     preferred_categories: list[str] = Field(default_factory=list)
@@ -48,6 +56,31 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# JWT Authentication
+security = HTTPBearer()
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    token = credentials.credentials
+
+    try:
+        user_id = decode_access_token(token)
+    except Exception:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired login token."
+        )
+
+    user = get_user_by_id(user_id)
+
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="User account not found."
+        )
+
+    return user
 
 @app.get("/")
 def home():
@@ -105,7 +138,10 @@ async def get_adzuna_jobs():
         )
 
 @app.post("/api/resume/analyze")
-async def upload_resume(file: UploadFile = File(...)):
+async def upload_resume(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
 
     filename = file.filename or ""
 
@@ -158,7 +194,10 @@ class JobRecommendationRequest(BaseModel):
 
 
 @app.post("/api/jobs/recommend")
-def get_job_recommendations(request: JobRecommendationRequest):
+def get_job_recommendations(
+    request: JobRecommendationRequest,
+    current_user: dict = Depends(get_current_user)
+):
 
     if not request.resume_text.strip():
         raise HTTPException(
@@ -193,7 +232,8 @@ def get_job_recommendations(request: JobRecommendationRequest):
 
 @app.post("/api/jobs/recommend-live")
 async def get_live_job_recommendations(
-    request: JobRecommendationRequest
+    request: JobRecommendationRequest,
+    current_user: dict = Depends(get_current_user)
 ):
     if not request.resume_text.strip():
         raise HTTPException(
@@ -262,7 +302,9 @@ class UnifiedJobSearchRequest(BaseModel):
     resume_text: str
     keyword: str = "software"
     location: str = ""
-    sources: list[str] = ["Remotive", "Adzuna"]
+    sources: list[str] = Field(
+        default_factory=lambda: ["Remotive", "Adzuna"]
+    )
     limit: int = 10
     include_demo: bool = False
 
@@ -270,7 +312,7 @@ class UnifiedJobSearchRequest(BaseModel):
     experience_level: str = "Any"
     work_mode: str = "Any"
     min_salary: float | None = None
-    required_skills: list[str] = []
+    required_skills: list[str] = Field(default_factory=list)
 
 
 
@@ -551,30 +593,6 @@ def calculate_preference_match(job, profile):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
-security = HTTPBearer()
-
-def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
-):
-    token = credentials.credentials
-
-    try:
-        user_id = decode_access_token(token)
-    except Exception:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid or expired login token."
-        )
-
-    user = get_user_by_id(user_id)
-
-    if not user:
-        raise HTTPException(
-            status_code=401,
-            detail="User account not found."
-        )
-
-    return user
 
 @app.post("/api/jobs/search")
 async def unified_job_search(
@@ -887,3 +905,171 @@ def save_user_profile(
         "message": "Profile updated successfully.",
         "profile": profile
     }
+
+class ApplicationCreateRequest(BaseModel):
+    job: dict
+    status: str = "Interested"
+    notes: str = ""
+
+
+class ApplicationUpdateRequest(BaseModel):
+    job_id: str
+    status: str | None = None
+    notes: str | None = None
+@app.post("/api/applications")
+async def create_application(
+    request: ApplicationCreateRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    try:
+        add_application(
+            user_id=current_user["id"],
+            job=request.job,
+            status=request.status,
+            notes=request.notes
+        )
+
+        return {
+            "success": True,
+            "message": "Application saved successfully."
+        }
+
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+@app.get("/api/applications")
+async def list_applications(
+    current_user: dict = Depends(get_current_user)
+):
+    applications = get_applications(current_user["id"])
+
+    return {
+        "success": True,
+        "total": len(applications),
+        "applications": applications
+    }
+
+
+@app.put("/api/applications")
+async def edit_application(
+    request: ApplicationUpdateRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    if request.status is None and request.notes is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Provide a status or notes update."
+        )
+
+    try:
+        updated = update_application(
+            user_id=current_user["id"],
+            job_id=request.job_id,
+            status=request.status,
+            notes=request.notes
+        )
+
+        if not updated:
+            raise HTTPException(
+                status_code=404,
+                detail="Application not found."
+            )
+
+        return {
+            "success": True,
+            "message": "Application updated successfully."
+        }
+
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+@app.delete("/api/applications")
+async def remove_application(
+    job_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    deleted = delete_application(
+        user_id=current_user["id"],
+        job_id=job_id
+    )
+
+    if not deleted:
+        raise HTTPException(
+            status_code=404,
+            detail="Application not found."
+        )
+
+    return {
+        "success": True,
+        "message": "Application deleted successfully."
+    }
+
+
+@app.get("/api/applications/statistics")
+async def application_statistics(
+    current_user: dict = Depends(get_current_user)
+):
+    return {
+        "success": True,
+        "statistics": get_application_statistics(
+            current_user["id"]
+        )
+    }
+
+class ResumeImproveRequest(BaseModel):
+    resume_text: str
+    target_skills: list[str] = Field(default_factory=list)
+
+@app.post("/api/resume/improve")
+def improve_resume(
+    request: ResumeImproveRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    if not request.resume_text.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Resume text cannot be empty."
+        )
+
+    return review_resume(
+        request.resume_text,
+        request.target_skills
+    )
+
+class ResumeTailorRequest(BaseModel):
+    resume_text: str
+    job_title: str
+    job_description: str = ""
+    job_skills: list[str] | None = None
+
+@app.post("/api/resume/tailor")
+def tailor_resume_for_job(
+    request: ResumeTailorRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    if not request.resume_text.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Resume text cannot be empty."
+        )
+
+    if not request.job_description.strip() and not request.job_skills:
+        raise HTTPException(
+            status_code=400,
+            detail="The job description or job skills are required."
+        )
+
+    try:
+        return tailor_resume(
+            resume_text=request.resume_text,
+            job_title=request.job_title,
+            job_description=request.job_description,
+            job_skills=request.job_skills
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        )

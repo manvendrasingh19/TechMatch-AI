@@ -24,6 +24,7 @@ _IMPORT_TEST_DB = (
 saved_jobs.DB_PATH = _IMPORT_TEST_DB
 
 # Import the application only after setting the safe DB path.
+import application_tracker
 import main
 import auth
 import user_profiles
@@ -39,6 +40,7 @@ def client(tmp_path, monkeypatch):
     auth.initialize_auth_database()
     saved_jobs.initialize_database()
     user_profiles.initialize_profiles_database()
+    application_tracker.initialize_application_database()
 
     with TestClient(main.app) as test_client:
         yield test_client
@@ -239,9 +241,11 @@ def test_current_user_with_invalid_token(client):
 # --------------------------------------------------
 
 def test_resume_upload_unsupported_file(client):
+    headers = get_auth_headers(client)
     response = client.post(
         "/api/resume/analyze",
-        files={"file": ("resume.txt", b"Some resume text", "text/plain")}
+        files={"file": ("resume.txt", b"Some resume text", "text/plain")},
+        headers=headers
     )
 
     assert response.status_code == 400
@@ -251,9 +255,11 @@ def test_resume_upload_unsupported_file(client):
 
 
 def test_resume_upload_empty_file(client):
+    headers = get_auth_headers(client)
     response = client.post(
         "/api/resume/analyze",
-        files={"file": ("resume.pdf", b"", "application/pdf")}
+        files={"file": ("resume.pdf", b"", "application/pdf")},
+        headers=headers
     )
 
     assert response.status_code == 400
@@ -261,17 +267,20 @@ def test_resume_upload_empty_file(client):
 
 
 def test_resume_upload_too_large(client):
+    headers = get_auth_headers(client)
     large_file = b"x" * (5 * 1024 * 1024 + 1)
 
     response = client.post(
         "/api/resume/analyze",
-        files={"file": ("resume.pdf", large_file, "application/pdf")}
+        files={"file": ("resume.pdf", large_file, "application/pdf")},
+        headers=headers
     )
 
     assert response.status_code == 413
 
 
 def test_resume_upload_success(client, monkeypatch):
+    headers = get_auth_headers(client)
     expected_result = {
         "filename": "resume.pdf",
         "skills": ["Python", "FastAPI"]
@@ -285,7 +294,8 @@ def test_resume_upload_success(client, monkeypatch):
 
     response = client.post(
         "/api/resume/analyze",
-        files={"file": ("resume.pdf", b"fake PDF content", "application/pdf")}
+        files={"file": ("resume.pdf", b"fake PDF content", "application/pdf")},
+        headers=headers
     )
 
     assert response.status_code == 200
@@ -294,6 +304,7 @@ def test_resume_upload_success(client, monkeypatch):
 
 
 def test_resume_upload_processing_error(client, monkeypatch):
+    headers = get_auth_headers(client)
     def raise_error(filename, file_bytes):
         raise RuntimeError("Processing failed")
 
@@ -301,7 +312,8 @@ def test_resume_upload_processing_error(client, monkeypatch):
 
     response = client.post(
         "/api/resume/analyze",
-        files={"file": ("resume.pdf", b"fake PDF content", "application/pdf")}
+        files={"file": ("resume.pdf", b"fake PDF content", "application/pdf")},
+        headers=headers
     )
 
     assert response.status_code == 400
@@ -313,6 +325,7 @@ def test_resume_upload_processing_error(client, monkeypatch):
 # --------------------------------------------------
 
 def test_job_recommendations_success(client, monkeypatch):
+    headers = get_auth_headers(client)
     expected_jobs = [
         {
             "title": "Python Developer",
@@ -332,7 +345,8 @@ def test_job_recommendations_success(client, monkeypatch):
         json={
             "resume_text": "Python developer with FastAPI experience",
             "limit": 5
-        }
+        },
+        headers=headers
     )
 
     assert response.status_code == 200
@@ -344,9 +358,11 @@ def test_job_recommendations_success(client, monkeypatch):
 
 
 def test_job_recommendations_empty_resume(client):
+    headers = get_auth_headers(client)
     response = client.post(
         "/api/jobs/recommend",
-        json={"resume_text": "   ", "limit": 5}
+        json={"resume_text": "   ", "limit": 5},
+        headers=headers
     )
 
     assert response.status_code == 400
@@ -355,12 +371,14 @@ def test_job_recommendations_empty_resume(client):
 
 @pytest.mark.parametrize("limit", [0, 51, -1])
 def test_job_recommendations_invalid_limit(client, limit):
+    headers = get_auth_headers(client)
     response = client.post(
         "/api/jobs/recommend",
         json={
             "resume_text": "Python developer",
             "limit": limit
-        }
+        },
+        headers=headers
     )
 
     assert response.status_code == 400
@@ -946,6 +964,7 @@ def test_job_search_ranking_failure(client, monkeypatch):
 # --------------------------------------------------
 
 def test_recommend_live_success(client, monkeypatch):
+    headers = get_auth_headers(client)
     from unittest.mock import AsyncMock
 
     demo_jobs = [
@@ -983,7 +1002,8 @@ def test_recommend_live_success(client, monkeypatch):
         json={
             "resume_text": "Python and Java developer",
             "limit": 10
-        }
+        },
+        headers=headers
     )
 
     assert response.status_code == 200
@@ -998,6 +1018,7 @@ def test_recommend_live_success(client, monkeypatch):
 
 
 def test_recommend_live_removes_duplicates(client, monkeypatch):
+    headers = get_auth_headers(client)
     from unittest.mock import AsyncMock
 
     demo_jobs = [
@@ -1032,7 +1053,8 @@ def test_recommend_live_removes_duplicates(client, monkeypatch):
 
     response = client.post(
         "/api/jobs/recommend-live",
-        json={"resume_text": "Python developer"}
+        json={"resume_text": "Python developer"},
+        headers=headers
     )
 
     assert response.status_code == 200
@@ -1041,6 +1063,7 @@ def test_recommend_live_removes_duplicates(client, monkeypatch):
 
 
 def test_recommend_live_remotive_failure(client, monkeypatch):
+    headers = get_auth_headers(client)
     from unittest.mock import AsyncMock
 
     demo_jobs = [
@@ -1067,7 +1090,8 @@ def test_recommend_live_remotive_failure(client, monkeypatch):
 
     response = client.post(
         "/api/jobs/recommend-live",
-        json={"resume_text": "Python developer"}
+        json={"resume_text": "Python developer"},
+        headers=headers
     )
 
     assert response.status_code == 200
@@ -1083,9 +1107,11 @@ def test_recommend_live_remotive_failure(client, monkeypatch):
 
 
 def test_recommend_live_empty_resume(client):
+    headers = get_auth_headers(client)
     response = client.post(
         "/api/jobs/recommend-live",
-        json={"resume_text": "   "}
+        json={"resume_text": "   "},
+        headers=headers
     )
 
     assert response.status_code == 400
@@ -1096,12 +1122,14 @@ def test_recommend_live_empty_resume(client):
 
 @pytest.mark.parametrize("limit", [0, 51, -1])
 def test_recommend_live_invalid_limit(client, limit):
+    headers = get_auth_headers(client)
     response = client.post(
         "/api/jobs/recommend-live",
         json={
             "resume_text": "Python developer",
             "limit": limit
-        }
+        },
+        headers=headers
     )
 
     assert response.status_code == 400
@@ -1111,6 +1139,7 @@ def test_recommend_live_invalid_limit(client, limit):
 
 
 def test_recommend_live_ranking_failure(client, monkeypatch):
+    headers = get_auth_headers(client)
     from unittest.mock import AsyncMock
 
     monkeypatch.setattr(main, "load_jobs", lambda: [])
@@ -1128,7 +1157,8 @@ def test_recommend_live_ranking_failure(client, monkeypatch):
 
     response = client.post(
         "/api/jobs/recommend-live",
-        json={"resume_text": "Python developer"}
+        json={"resume_text": "Python developer"},
+        headers=headers
     )
 
     assert response.status_code == 500
@@ -1247,6 +1277,7 @@ def test_adzuna_jobs_api_failure(client, monkeypatch):
 # --------------------------------------------------
 
 def test_resume_analysis_value_error(client, monkeypatch):
+    headers = get_auth_headers(client)
     def raise_value_error(filename, file_bytes):
         raise ValueError("Invalid resume content")
 
@@ -1264,7 +1295,9 @@ def test_resume_analysis_value_error(client, monkeypatch):
                 b"fake resume content",
                 "application/pdf"
             )
-        }
+        },
+        headers=headers
+
     )
 
     assert response.status_code == 400
@@ -1272,6 +1305,7 @@ def test_resume_analysis_value_error(client, monkeypatch):
 
 
 def test_job_recommendation_failure(client, monkeypatch):
+    headers = get_auth_headers(client)
     def raise_recommendation_error(*args, **kwargs):
         raise Exception("AI engine unavailable")
 
@@ -1286,7 +1320,8 @@ def test_job_recommendation_failure(client, monkeypatch):
         json={
             "resume_text": "Python developer",
             "limit": 10
-        }
+        },
+        headers=headers
     )
 
     assert response.status_code == 500
@@ -1463,3 +1498,463 @@ def test_job_search_adzuna_failure(client, monkeypatch):
     assert data["success"] is True
     assert data["total_jobs_collected"] == 0
     assert "Adzuna: Adzuna unavailable" in data["source_warnings"]
+
+# --------------------------------------------------
+# Application Tracker API tests
+# --------------------------------------------------
+
+def test_create_application_api(client):
+    headers = get_auth_headers(client)
+
+    response = client.post(
+        "/api/applications",
+        headers=headers,
+        json={
+            "job": {
+                "id": "api-job-101",
+                "title": "Python Developer",
+                "company": "Tech Company"
+            },
+            "status": "Interested",
+            "notes": "Prepare for application"
+        }
+    )
+
+    assert response.status_code == 200
+    assert response.json()["success"] is True
+
+def test_duplicate_application_save_preserves_tracking_data_api(client):
+    headers = get_auth_headers(client)
+
+    # First save: create an application with notes.
+    first_response = client.post(
+        "/api/applications",
+        headers=headers,
+        json={
+            "job": {
+                "id": "duplicate-api-job-101",
+                "title": "Python Developer",
+                "company": "Original Company",
+            },
+            "status": "Interview",
+            "notes": "Technical interview scheduled",
+        },
+    )
+
+    assert first_response.status_code == 200
+
+    # Second save: submit the same job with different tracking data.
+    second_response = client.post(
+        "/api/applications",
+        headers=headers,
+        json={
+            "job": {
+                "id": "duplicate-api-job-101",
+                "title": "Senior Python Developer",
+                "company": "Updated Company",
+            },
+            "status": "Interested",
+            "notes": "New notes should not overwrite existing notes",
+        },
+    )
+
+    assert second_response.status_code == 200
+
+    # Retrieve the application and verify the final data.
+    list_response = client.get(
+        "/api/applications",
+        headers=headers,
+    )
+
+    assert list_response.status_code == 200
+
+    applications = list_response.json()["applications"]
+
+    application = next(
+        item for item in applications
+        if item["job_id"] == "duplicate-api-job-101"
+    )
+
+    # Job information should be refreshed.
+    assert application["job"]["title"] == "Senior Python Developer"
+    assert application["job"]["company"] == "Updated Company"
+
+    # Tracking information should remain unchanged.
+    assert application["status"] == "Interview"
+    assert application["notes"] == "Technical interview scheduled"
+
+
+
+def test_create_application_invalid_status_api(client):
+    headers = get_auth_headers(client)
+
+    response = client.post(
+        "/api/applications",
+        headers=headers,
+        json={
+            "job": {"id": "api-job-102"},
+            "status": "Invalid"
+        }
+    )
+
+    assert response.status_code == 400
+
+
+def test_create_application_without_job_id_api(client):
+    headers = get_auth_headers(client)
+
+    response = client.post(
+        "/api/applications",
+        headers=headers,
+        json={
+            "job": {"title": "Python Developer"},
+            "status": "Interested"
+        }
+    )
+
+    assert response.status_code == 400
+
+
+def test_list_applications_api(client):
+    headers = get_auth_headers(client)
+
+    client.post(
+        "/api/applications",
+        headers=headers,
+        json={
+            "job": {"id": "api-job-103", "title": "Java Developer"},
+            "status": "Applied"
+        }
+    )
+
+    response = client.get(
+        "/api/applications",
+        headers=headers
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["success"] is True
+    assert data["total"] == 1
+    assert len(data["applications"]) == 1
+    assert data["applications"][0]["job"]["id"] == "api-job-103"
+
+
+def test_list_empty_applications_api(client):
+    headers = get_auth_headers(client)
+
+    response = client.get(
+        "/api/applications",
+        headers=headers
+    )
+
+    assert response.status_code == 200
+    assert response.json()["total"] == 0
+    assert response.json()["applications"] == []
+
+
+def test_update_application_api(client):
+    headers = get_auth_headers(client)
+
+    client.post(
+        "/api/applications",
+        headers=headers,
+        json={
+            "job": {"id": "api-job-104", "title": "Backend Developer"},
+            "status": "Interested"
+        }
+    )
+
+    response = client.put(
+        "/api/applications",
+        headers=headers,
+        json={
+            "job_id": "api-job-104",
+            "status": "Applied",
+            "notes": "Application submitted"
+        }
+    )
+
+    assert response.status_code == 200
+    assert response.json()["success"] is True
+
+
+def test_update_application_notes_only_api(client):
+    headers = get_auth_headers(client)
+
+    client.post(
+        "/api/applications",
+        headers=headers,
+        json={
+            "job": {"id": "api-job-105"},
+            "status": "Interested"
+        }
+    )
+
+    response = client.put(
+        "/api/applications",
+        headers=headers,
+        json={
+            "job_id": "api-job-105",
+            "notes": "Updated notes"
+        }
+    )
+
+    assert response.status_code == 200
+
+
+def test_update_application_without_changes_api(client):
+    headers = get_auth_headers(client)
+
+    response = client.put(
+        "/api/applications",
+        headers=headers,
+        json={"job_id": "api-job-106"}
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == (
+        "Provide a status or notes update."
+    )
+
+
+def test_update_nonexistent_application_api(client):
+    headers = get_auth_headers(client)
+
+    response = client.put(
+        "/api/applications",
+        headers=headers,
+        json={
+            "job_id": "missing-job",
+            "status": "Applied"
+        }
+    )
+
+    assert response.status_code == 404
+
+
+def test_update_application_invalid_status_api(client):
+    headers = get_auth_headers(client)
+
+    client.post(
+        "/api/applications",
+        headers=headers,
+        json={
+            "job": {"id": "api-job-107"},
+            "status": "Interested"
+        }
+    )
+
+    response = client.put(
+        "/api/applications",
+        headers=headers,
+        json={
+            "job_id": "api-job-107",
+            "status": "Invalid"
+        }
+    )
+
+    assert response.status_code == 400
+
+
+def test_delete_application_api(client):
+    headers = get_auth_headers(client)
+
+    client.post(
+        "/api/applications",
+        headers=headers,
+        json={
+            "job": {"id": "api-job-108"},
+            "status": "Interested"
+        }
+    )
+
+    response = client.delete(
+        "/api/applications",
+        headers=headers,
+        params={"job_id": "api-job-108"}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["success"] is True
+
+
+def test_delete_nonexistent_application_api(client):
+    headers = get_auth_headers(client)
+
+    response = client.delete(
+        "/api/applications",
+        headers=headers,
+        params={"job_id": "missing-job"}
+    )
+
+    assert response.status_code == 404
+
+
+def test_application_statistics_api(client):
+    headers = get_auth_headers(client)
+
+    client.post(
+        "/api/applications",
+        headers=headers,
+        json={
+            "job": {"id": "api-job-109"},
+            "status": "Applied"
+        }
+    )
+
+    response = client.get(
+        "/api/applications/statistics",
+        headers=headers
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["success"] is True
+    assert data["statistics"]["Total"] == 1
+    assert data["statistics"]["Applied"] == 1
+
+
+# --------------------------------------------------
+# Resume Advisor API tests
+# --------------------------------------------------
+
+def test_improve_resume_api(client):
+    headers = get_auth_headers(client)
+
+    response = client.post(
+        "/api/resume/improve",
+        headers=headers,
+        json={
+            "resume_text": (
+                "Professional Summary Python developer. "
+                "Technical Skills Python Java. "
+                "Education Computer Science. "
+                "Projects Developed applications. "
+                "Experience Built software. "
+                "Certifications Python certification."
+            ),
+            "target_skills": ["Python", "Java", "React"]
+        }
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert "quality_score" in data
+    assert "category_scores" in data
+    assert "keyword_suggestions" in data
+    assert "React" in data["keyword_suggestions"]
+
+
+def test_improve_resume_empty_text_api(client):
+    headers = get_auth_headers(client)
+
+    response = client.post(
+        "/api/resume/improve",
+        headers=headers,
+        json={
+            "resume_text": "   ",
+            "target_skills": []
+        }
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Resume text cannot be empty."
+
+
+# --------------------------------------------------
+# Resume Tailor API tests
+# --------------------------------------------------
+
+def test_tailor_resume_api(client):
+    headers = get_auth_headers(client)
+
+    response = client.post(
+        "/api/resume/tailor",
+        headers=headers,
+        json={
+            "resume_text": (
+                "Python developer with experience building "
+                "Python applications for enterprise clients."
+            ),
+            "job_title": "Python Developer",
+            "job_description": "We require Python and Java skills.",
+            "job_skills": ["Python", "Java"]
+        }
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["job_title"] == "Python Developer"
+    assert "Python" in data["matched_skills"]
+    assert "Java" in data["missing_skills"]
+    assert data["skill_match_percentage"] == 50
+
+
+def test_tailor_resume_empty_text_api(client):
+    headers = get_auth_headers(client)
+
+    response = client.post(
+        "/api/resume/tailor",
+        headers=headers,
+        json={
+            "resume_text": "   ",
+            "job_title": "Python Developer",
+            "job_description": "Python required"
+        }
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Resume text cannot be empty."
+
+
+def test_tailor_resume_without_job_details_api(client):
+    headers = get_auth_headers(client)
+
+    response = client.post(
+        "/api/resume/tailor",
+        headers=headers,
+        json={
+            "resume_text": "Python developer with project experience.",
+            "job_title": "Python Developer",
+            "job_description": "",
+            "job_skills": []
+        }
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == (
+        "The job description or job skills are required."
+    )
+
+
+def test_tailor_resume_value_error_api(client, monkeypatch):
+    headers = get_auth_headers(client)
+
+    def raise_value_error(**kwargs):
+        raise ValueError("Invalid resume tailoring request.")
+
+    monkeypatch.setattr(main, "tailor_resume", raise_value_error)
+
+    response = client.post(
+        "/api/resume/tailor",
+        headers=headers,
+        json={
+            "resume_text": "Python developer with project experience.",
+            "job_title": "Python Developer",
+            "job_description": "Python required"
+        }
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == (
+        "Invalid resume tailoring request."
+    )
