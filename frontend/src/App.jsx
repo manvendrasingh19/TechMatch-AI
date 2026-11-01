@@ -5,7 +5,8 @@ import {
   ArrowRight, Search, FileText, Sparkles,
   BriefcaseBusiness, Target, TrendingUp,
   Code2, BrainCircuit, Database, Cloud,
-  ShieldCheck, Menu, X, Upload, CheckCircle2, Eye, EyeOff
+  ShieldCheck, Menu, X, Upload, CheckCircle2, Eye, EyeOff,
+  UserRound, Mail, LogOut, ArrowUpRight
 } from "lucide-react";
 import "./App.css";
 import { jsPDF } from "jspdf";
@@ -1066,18 +1067,78 @@ function App() {
       <section className="auth-section" id="auth-section">
         {currentUser ? (
           <div className="user-profile-bar">
-            <div>
-              <span className="user-welcome">Welcome back,</span>
-              <h3>{currentUser.name}</h3>
-              <p>{currentUser.email}</p>
+            <div className="user-profile-main">
+              <div className="user-avatar" aria-hidden="true">
+                {currentUser.name
+                  ?.trim()
+                  .split(/\s+/)
+                  .filter(Boolean)
+                  .slice(0, 2)
+                  .map((part) => part[0])
+                  .join("")
+                  .toUpperCase() || <UserRound size={25} />}
+                <span className="user-avatar-status" />
+              </div>
+
+              <div className="user-identity">
+                <div className="user-welcome-row">
+                  <span className="user-welcome">YOUR TECHMATCH SPACE</span>
+                  <span className="user-active-badge">
+                    <span />
+                    ACCOUNT ACTIVE
+                  </span>
+                </div>
+                <h3>Welcome back, {currentUser.name?.split(" ")[0] || "there"}!</h3>
+                <p className="user-email">
+                  <Mail size={14} />
+                  {currentUser.email}
+                </p>
+              </div>
             </div>
 
-            <button
-              className="auth-logout-button"
-              onClick={handleLogout}
-            >
-              Log Out
-            </button>
+            <div className="user-profile-actions">
+              <button
+                type="button"
+                className="user-action-button user-applications-button"
+                onClick={() => setShowApplicationTracker(true)}
+              >
+                <BriefcaseBusiness size={16} />
+                My Applications
+                <ArrowUpRight size={14} />
+              </button>
+
+              <button
+                type="button"
+                className="user-action-button user-preferences-button"
+                onClick={() => {
+                  document.querySelector(".personal-profile")?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start"
+                  });
+                }}
+              >
+                <UserRound size={16} />
+                Preferences
+              </button>
+
+              <span className="user-actions-divider" />
+
+              <button
+                type="button"
+                className="auth-logout-button"
+                onClick={handleLogout}
+                aria-label="Log out of TechMatch AI"
+                title="Log out"
+              >
+                <LogOut size={16} />
+                <span>Log Out</span>
+              </button>
+            </div>
+
+            <div className="user-profile-decoration" aria-hidden="true">
+              <span className="user-decoration-orb user-decoration-orb-one" />
+              <span className="user-decoration-orb user-decoration-orb-two" />
+            </div>
           </div>
         ) : (
           <div className="auth-card">
