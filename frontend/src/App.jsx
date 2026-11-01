@@ -5,7 +5,7 @@ import {
   ArrowRight, Search, FileText, Sparkles,
   BriefcaseBusiness, Target, TrendingUp,
   Code2, BrainCircuit, Database, Cloud,
-  ShieldCheck, Menu, X, CheckCircle2
+  ShieldCheck, Menu, X, Upload, CheckCircle2, Eye, EyeOff
 } from "lucide-react";
 import "./App.css";
 import { jsPDF } from "jspdf";
@@ -58,9 +58,10 @@ function App() {
   const [authName, setAuthName] = useState("");
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
 
-  const [, setProfile] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [preferredLocation, setPreferredLocation] = useState("India");
 
   const [preferredCategories, setPreferredCategories] = useState([
@@ -180,56 +181,46 @@ function App() {
   };
 
 
-  useEffect(() => {
-    if (!authToken) return;
-
-    let isActive = true;
-
-    const restoreSession = async () => {
-      try {
-        const response = await fetch(
-          "http://127.0.0.1:8000/api/auth/me",
-          {
-            headers: {
-              Authorization: `Bearer ${authToken}`,
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("Login session expired.");
+  const loadMyProfile = async (token) => {
+    try {
+      const response = await fetch(
+        "http://127.0.0.1:8000/api/auth/me",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
+      );
 
-        const data = await response.json();
-
-        if (!isActive) return;
-
-        setCurrentUser(data.user);
-
-        await loadUserProfile(authToken);
-
-        if (!isActive) return;
-
-        await loadSavedJobs(authToken);
-      } catch (error) {
-        if (!isActive) return;
-
-        console.error("Profile loading error:", error);
-        handleLogout();
+      if (!response.ok) {
+        throw new Error("Login session expired.");
       }
-    };
 
-    restoreSession();
+      const data = await response.json();
+      setCurrentUser(data.user);
+      await loadUserProfile(token);
+      await loadSavedJobs(token);
 
-    return () => {
-      isActive = false;
-    };
+    } catch (error) {
+      console.error("Profile loading error:", error);
+      handleLogout();
+    }
+  };
+
+
+  useEffect(() => {
+    if (authToken) {
+      loadMyProfile(authToken);
+    } else {
+      setCurrentUser(null);
+      setProfile(null);
+    }
   }, [authToken]);
 
 
 
-
-  async function loadUserProfile(token = authToken) {
+  
+  const loadUserProfile = async (token = authToken) => {
     if (!token) return;
 
     try {
@@ -259,7 +250,7 @@ function App() {
       console.error("Preference loading error:", error);
       setProfileMessage(error.message);
     }
-  }
+  };
 
 
   const handleSaveProfile = async () => {
@@ -322,6 +313,52 @@ function App() {
   };
 
 
+
+
+  const handleFindJobs = async () => {
+    if (!requireLogin()) return;
+    if (!analysis?.extracted_text) {
+      setMatchError("Please upload and analyze your resume first.");
+      return;
+    }
+
+    setMatching(true);
+    setMatchError("");
+    setHasSearchedJobs(false);
+    setJobs([]);
+
+    try {
+      const response = await fetch(
+        "http://127.0.0.1:8000/api/jobs/recommend-live",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: JSON.stringify({
+            resume_text: analysis.extracted_text,
+            limit: 10,
+          }),
+        }
+      );
+
+      const data = await response.json();
+      setTotalJobsCollected(data.total_jobs_after_filters ?? 0);
+      if (!response.ok) {
+        throw new Error(data.detail || "Could not find job recommendations.");
+      }
+
+      setJobs(data.recommendations || []);
+      setHasSearchedJobs(true);
+    } catch (error) {
+      setMatchError(error.message || "Something went wrong.");
+    } finally {
+      setMatching(false);
+    }
+  };
+
+  
   const handleResumeReview = async () => {
     if (!requireLogin()) return;
     if (!analysis?.extracted_text) {
@@ -531,8 +568,8 @@ function App() {
     );
   };
 
-
-  async function loadSavedJobs(token = authToken) {
+  
+  const loadSavedJobs = async (token = authToken) => {
     if (!token) return;
 
     try {
@@ -555,10 +592,10 @@ function App() {
     } catch (error) {
       setMatchError(error.message);
     }
-  }
+  };
 
-
-
+  
+  
   const exportCareerReport = () => {
     if (!analysis || !resumeReview) {
       alert("Please analyze and review your resume before exporting.");
@@ -833,7 +870,7 @@ function App() {
     }
   };
 
-
+  
   const handleAddToApplications = async (job) => {
     if (!authToken) {
       setAuthError("Please log in to track applications.");
@@ -899,7 +936,7 @@ function App() {
   };
 
 
-
+  
   const skillLearningResources = {
     "java": {
       name: "Official Java Tutorials",
@@ -971,7 +1008,7 @@ function App() {
     return "Explore";
   };
 
-
+  
   const openUpload = () => {
     if (!requireLogin()) return;
 
@@ -979,13 +1016,14 @@ function App() {
   };
 
   return (
-
+    
     <div className="app">
 
       <nav className="navbar">
         <a href="#" className="brand">
           <div className="brand-icon"><Sparkles size={22} /></div>
-          <span>TechMatch<span className="brand-ai"> AI</span></span>
+          <span className="brand-wordmark">TechMatch<span className="brand-ai"> AI</span></span>
+          <span className="brand-pill">SMART CAREERS</span>
         </a>
 
         <button
@@ -1003,6 +1041,10 @@ function App() {
         </div>
 
         <div className="nav-actions">
+          <span className="nav-status">
+            <span className="nav-status-dot" />
+            AI MATCHING READY
+          </span>
           {currentUser && (
             <button
               className="login-btn"
@@ -1038,71 +1080,64 @@ function App() {
           </div>
         ) : (
           <div className="auth-card">
+            <div className="auth-eyebrow">
+              <Sparkles size={13} />
+              AI-POWERED CAREER COMPANION
+              <span className="auth-eyebrow-tag">SECURE ACCESS</span>
+            </div>
+
+            <div className="auth-heading-row">
+              <div className="auth-heading-mark"><Sparkles size={20} /></div>
+              <span className="auth-heading-caption">YOUR CAREER, MATCHED SMARTER</span>
+            </div>
+
             <h2>
               {authMode === "login"
-                ? "Welcome to TechMatch AI"
-                : "Create Your Account"}
+                ? <>Welcome back to <span className="auth-title-accent">TechMatch AI</span></>
+                : <>Create your <span className="auth-title-accent">TechMatch</span> account</>}
             </h2>
 
             <p>
               {authMode === "login"
-                ? "Log in to access your personal job dashboard."
-                : "Register to start your personalized job search."}
+                ? "Log in to unlock your personalized job matches and career insights."
+                : "Create your account to discover opportunities tailored to your skills."}
             </p>
 
-            <div className="auth-tabs">
+            <div className="auth-tabs" role="tablist" aria-label="Authentication options">
               <button
+                type="button"
+                role="tab"
+                aria-selected={authMode === "login"}
                 className={authMode === "login" ? "active" : ""}
                 onClick={() => {
                   setAuthMode("login");
                   setAuthError("");
+                  setShowPassword(false);
                 }}
               >
                 Login
               </button>
 
               <button
+                type="button"
+                role="tab"
+                aria-selected={authMode === "register"}
                 className={authMode === "register" ? "active" : ""}
                 onClick={() => {
                   setAuthMode("register");
                   setAuthError("");
+                  setShowPassword(false);
                 }}
               >
-                Register
+                Create Account
               </button>
             </div>
 
-            {authMode === "register" && (
-              <input
-                type="text"
-                placeholder="Full Name"
-                value={authName}
-                onChange={(e) => setAuthName(e.target.value)}
-              />
-            )}
-
-            <input
-              type="email"
-              placeholder="Email Address"
-              value={authEmail}
-              onChange={(e) => setAuthEmail(e.target.value)}
-            />
-
-            <input
-              type="password"
-              placeholder="Password (minimum 8 characters)"
-              value={authPassword}
-              onChange={(e) => setAuthPassword(e.target.value)}
-            />
-
-            {authError && (
-              <p className="auth-error">{authError}</p>
-            )}
-
-            <button
-              className="auth-submit-button"
-              disabled={authLoading}
-              onClick={() => {
+            <form
+              className="auth-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (authLoading) return;
                 if (authMode === "login") {
                   handleLogin(authEmail, authPassword);
                 } else {
@@ -1110,12 +1145,87 @@ function App() {
                 }
               }}
             >
-              {authLoading
-                ? "Please wait..."
-                : authMode === "login"
-                  ? "Login"
-                  : "Create Account"}
-            </button>
+              {authMode === "register" && (
+                <label className="auth-field-label">
+                  Full name
+                  <input
+                    type="text"
+                    placeholder="Enter your full name"
+                    value={authName}
+                    onChange={(e) => setAuthName(e.target.value)}
+                    autoComplete="name"
+                    required
+                  />
+                </label>
+              )}
+
+              <label className="auth-field-label">
+                Email address
+                <input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={authEmail}
+                  onChange={(e) => setAuthEmail(e.target.value)}
+                  autoComplete="email"
+                  required
+                />
+              </label>
+
+              <label className="auth-field-label">
+                Password
+                <span className="password-field">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="At least 8 characters"
+                    value={authPassword}
+                    onChange={(e) => setAuthPassword(e.target.value)}
+                    autoComplete={authMode === "login" ? "current-password" : "new-password"}
+                    minLength={8}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle"
+                    onClick={() => setShowPassword((visible) => !visible)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-pressed={showPassword}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </span>
+              </label>
+
+              {authError && (
+                <p className="auth-error" role="alert" aria-live="polite">
+                  {authError}
+                </p>
+              )}
+
+              <button
+                className="auth-submit-button"
+                type="submit"
+                disabled={authLoading}
+              >
+                {authLoading ? (
+                  <>
+                    <span className="auth-spinner" />
+                    Please wait...
+                  </>
+                ) : (
+                  <>
+                    {authMode === "login" ? "Log In to Dashboard" : "Create My Account"}
+                    <ArrowRight size={17} />
+                  </>
+                )}
+              </button>
+            </form>
+
+            <div className="auth-assurance">
+              <ShieldCheck size={15} />
+              <span>Secure sign-in</span>
+              <span className="assurance-separator">•</span>
+              <span>Your career data stays private</span>
+            </div>
           </div>
         )}
       </section>
@@ -1348,7 +1458,7 @@ function App() {
               onChange={handleFile}
             />
 
-
+            
             {resume && (
               <div className="upload-status">
                 <FileText size={19} />
@@ -1405,7 +1515,7 @@ function App() {
               </div>
             )}
 
-
+            
             {analysis?.extracted_text && (
               <section className="resume-advisor">
                 <div className="resume-advisor-heading">
@@ -1435,7 +1545,7 @@ function App() {
 
                 {resumeReview && (
                   <div className="resume-advisor-results">
-
+                    
                   <div className="resume-quality-score">
                     <div className="quality-score-circle">
                       <strong>{resumeReview.quality_score}</strong>
@@ -1572,7 +1682,7 @@ function App() {
                     </p>
                   </div>
                 )}
-
+                
                 {resumeReview && (
                   <button
                     className="export-report-button"
@@ -1821,8 +1931,8 @@ function App() {
 
             {hasSearchedJobs && (
               <section className="job-results">
-
-
+                
+              
               <div className="skill-gap-section">
                 <div className="skill-gap-heading">
                   <span>AI CAREER INSIGHTS</span>
